@@ -6,18 +6,18 @@ export function SiteNav({ home = false }: { home?: boolean }) {
   const to = (hash: string) => (home ? hash : `/${hash}`)
 
   return (
-    <div className="shell">
-      <header className={`nav ${open ? 'open' : ''}`}>
+    <header className={`nav-wrap ${open ? 'open' : ''}`}>
+      <div className="shell nav">
         <Link className="mark" to="/" onClick={() => setOpen(false)}>
           <img className="nav-photo" src="/ravi.jpg" alt="" />
           RR
         </Link>
         <nav>
-          <Link to="/" onClick={() => setOpen(false)}>
-            Home
-          </Link>
           <a href={to('#about')} onClick={() => setOpen(false)}>
             About
+          </a>
+          <a href={to('#experience')} onClick={() => setOpen(false)}>
+            Experience
           </a>
           <a href={to('#work')} onClick={() => setOpen(false)}>
             Work
@@ -35,7 +35,7 @@ export function SiteNav({ home = false }: { home?: boolean }) {
         <button className="burger" type="button" onClick={() => setOpen((v) => !v)}>
           Menu
         </button>
-      </header>
-    </div>
+      </div>
+    </header>
   )
 }
