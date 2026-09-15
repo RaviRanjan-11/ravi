@@ -16,15 +16,18 @@ export function SiteNav({ home = false }: { home?: boolean }) {
           <a href={to('#about')} onClick={() => setOpen(false)}>
             About
           </a>
-          <a href={to('#experience')} onClick={() => setOpen(false)}>
-            Experience
+          <a href={to('#recommend')} onClick={() => setOpen(false)}>
+            Recs
           </a>
-          <a href={to('#work')} onClick={() => setOpen(false)}>
+          <a href={to('#featured')} onClick={() => setOpen(false)}>
             Work
           </a>
           <Link to="/handbook" onClick={() => setOpen(false)}>
             Handbook
           </Link>
+          <a href="https://medium.com/@r.ranjanchn" target="_blank" rel="noreferrer">
+            Medium
+          </a>
           <a href="/Ravi-Ranjan-iOS.pdf" onClick={() => setOpen(false)}>
             Resume
           </a>
