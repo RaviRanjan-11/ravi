@@ -474,6 +474,7 @@ footer {
   letter-spacing: -0.02em;
   margin: 1.3em 0 0.45em;
   color: #fff;
+  scroll-margin-top: 80px;
 }
 
 .md h1 {
