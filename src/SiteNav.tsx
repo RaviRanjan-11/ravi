@@ -16,14 +16,14 @@ export function SiteNav({ home = false }: { home?: boolean }) {
           <a href={to('#about')} onClick={() => setOpen(false)}>
             About
           </a>
+          <a href={to('#craft')} onClick={() => setOpen(false)}>
+            Engineering
+          </a>
           <a href={to('#experience')} onClick={() => setOpen(false)}>
             Experience
           </a>
           <a href={to('#featured')} onClick={() => setOpen(false)}>
             Work
-          </a>
-          <a href={to('#craft')} onClick={() => setOpen(false)}>
-            Engineering
           </a>
           <a href={to('#writing')} onClick={() => setOpen(false)}>
             Writing
