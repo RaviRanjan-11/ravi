@@ -22,15 +22,15 @@ export function SiteNav({ home = false }: { home?: boolean }) {
           <a href={to('#featured')} onClick={() => setOpen(false)}>
             Work
           </a>
-          <a href={to('#recommend')} onClick={() => setOpen(false)}>
-            Recs
+          <a href={to('#craft')} onClick={() => setOpen(false)}>
+            Engineering
+          </a>
+          <a href={to('#writing')} onClick={() => setOpen(false)}>
+            Writing
           </a>
           <Link to="/handbook" onClick={() => setOpen(false)}>
             Handbook
           </Link>
-          <a href="https://medium.com/@r.ranjanchn" target="_blank" rel="noreferrer">
-            Medium
-          </a>
           <a href="/Ravi-Ranjan-iOS.pdf" onClick={() => setOpen(false)}>
             Resume
           </a>

@@ -51,11 +51,12 @@ const apps = [
 const roles = [
   {
     company: 'Physics Wallah',
-    title: 'Senior iOS Developer',
+    title: 'Senior iOS Engineer · SDE3',
     when: 'Present',
     detail:
       'Own native iOS for Physics Wallah and PW Meded: authentication, onboarding, IAP, and release quality on high-traffic education products.',
-    impact: 'Auth flows used by 70k+ users. Mentoring, reviews, and architecture decisions across the mobile team — without publishing internal metrics or proprietary design.',
+    impact:
+      'Auth flows used by 70k+ users. Mentoring, reviews, architecture. PW Talk: iOS for AI-assisted English conversation — no confidential DAU or latency figures.',
   },
   {
     company: 'Spyne.AI',
@@ -88,15 +89,63 @@ const craft = [
   },
   {
     title: 'Architecture',
-    items: ['MVVM', 'Modular apps', 'POP', 'Dependency injection'],
+    items: ['MVVM', 'Modularization', 'DI', 'Clean boundaries'],
+  },
+  {
+    title: 'Backend',
+    items: ['Node.js', 'REST', 'MongoDB', 'WebSockets'],
+  },
+  {
+    title: 'AI / realtime',
+    items: ['LLM surfaces', 'Streaming', 'Voice-adjacent iOS'],
   },
   {
     title: 'Engineering',
-    items: ['REST', 'Auth', 'CI/CD', 'XCTest', 'Performance'],
+    items: ['Performance', 'CI/CD', 'XCTest', 'Analytics'],
+  },
+]
+
+const featured = [
+  {
+    kicker: 'EdTech · Physics Wallah',
+    name: 'PW Talk',
+    problem:
+      'Learners need spoken English practice that feels like a conversation, not a worksheet — on a phone, under real network conditions.',
+    role: 'iOS engineering for conversation and assessment surfaces: performance-critical UI, session flows, and release quality. No proprietary internals here.',
+    architecture: 'Swift · SwiftUI / UIKit · MVVM · networking · realtime-adjacent session work',
+    result: 'Shipped on a high-traffic education product. Confidential latency and DAU numbers stay internal.',
+    href: 'https://apps.apple.com/in/app/physics-wallah/id1641443555',
+    link: 'App Store →',
   },
   {
-    title: 'Leadership',
-    items: ['Ownership', 'Reviews', 'Mentoring', 'Trade-offs'],
+    kicker: 'EdTech · Physics Wallah',
+    name: 'Auth at consumer scale',
+    problem: 'Students must sign in and onboard without silent failure on a product they open every day.',
+    role: 'Owned authentication and onboarding paths: reliability, main-thread UI, crash-aware unwrapping, App Store delivery.',
+    architecture: 'Swift · UIKit / SwiftUI · MVVM · REST · Keychain for secrets',
+    result: '70k+ users on those auth flows — the only public number I will quote.',
+    href: 'https://apps.apple.com/in/app/physics-wallah/id1641443555',
+    link: 'App Store →',
+  },
+  {
+    kicker: 'Open source',
+    name: 'RVNetwork',
+    problem: 'URLSession copied into every view model, untestable and inconsistent.',
+    role: 'Designed a protocol-oriented client: routes own method/path/task; the service returns Result.',
+    architecture: 'Swift · URLSession · protocols · generics · injectable client',
+    result: 'Teams can fake the client in tests and keep encoding in one pipeline.',
+    href: 'https://github.com/RaviRanjan-11/RVNetwork',
+    link: 'GitHub →',
+  },
+  {
+    kicker: 'Product · Oodles',
+    name: 'Wethio Wallet',
+    problem: 'Wallet and marketplace flows where a failed auth or a stale screen is not acceptable.',
+    role: 'iOS for authentication, transaction surfaces, and delivery to the App Store.',
+    architecture: 'Swift · UIKit · networking · auth',
+    result: 'Shipped on the App Store. Reliability over novelty.',
+    href: 'https://apps.apple.com/in/app/wethio-wallet/id1506566578',
+    link: 'App Store →',
   },
 ]
 
@@ -154,44 +203,41 @@ export function HomePage() {
         <section className="hero" id="top">
           <div className="shell split">
             <div className="hero-copy">
-              <p className="kicker">Senior iOS Engineer · Product engineer</p>
+              <p className="kicker">SDE3 · Senior iOS Engineer</p>
               <h1>Ravi Ranjan</h1>
+              <p className="hero-line">
+                Senior iOS Engineer building scalable, high-performance mobile products.
+              </p>
               <p className="lede">
-                I build high-performance iOS products, design architectures that teams can evolve,
-                and turn messy product problems into software that ships.
+                Swift · SwiftUI · UIKit · architecture · performance · AI / realtime. I own the
+                hard paths — auth, payments, SDKs, conversation surfaces — and the trade-offs that
+                keep a team shipping.
               </p>
               <p className="now">
-                Currently <strong>Senior iOS</strong> at Physics Wallah · Open to Europe
+                Physics Wallah · Exploring senior iOS roles in <strong>Germany / Europe</strong>
               </p>
               <div className="hero-actions">
-                <a className="btn" href="#featured">
+                <a className="btn" href="/Ravi-Ranjan-iOS.pdf">
+                  Download resume
+                </a>
+                <a className="btn ghost" href="#featured">
                   View work
                 </a>
-                <a className="btn ghost" href="/Ravi-Ranjan-iOS.pdf">
-                  Resume
-                </a>
-                <a
-                  className="btn ghost"
-                  href="https://github.com/RaviRanjan-11"
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  GitHub
-                </a>
-                <a
-                  className="btn ghost"
-                  href="https://www.linkedin.com/in/rranjanchchn/"
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  LinkedIn
+                <a className="btn ghost" href="#contact">
+                  Contact
                 </a>
               </div>
               <p className="social">
+                <a href="https://github.com/RaviRanjan-11" target="_blank" rel="noreferrer">
+                  GitHub
+                </a>
+                <a href="https://www.linkedin.com/in/rranjanchchn/" target="_blank" rel="noreferrer">
+                  LinkedIn
+                </a>
+                <a href="mailto:r.ranjanchn@gmail.com">Email</a>
                 <a href="https://medium.com/@r.ranjanchn" target="_blank" rel="noreferrer">
                   Medium
                 </a>
-                <a href="mailto:r.ranjanchn@gmail.com">Email</a>
               </p>
             </div>
             <figure className="portrait">
@@ -237,12 +283,11 @@ export function HomePage() {
           </section>
 
           <section className="section" id="craft">
-            <p className="kicker">What I do</p>
-            <h2>Deep on iOS. Clear on everything else.</h2>
+            <p className="kicker">Engineering</p>
+            <h2>What I work on.</h2>
             <p className="lede">
-              Deep expertise: Swift, iOS, SwiftUI, UIKit, concurrency, architecture. Working
-              knowledge: backend APIs, WebSockets, and AI when the product needs it — not a
-              laundry list of every tool I have touched.
+              Deep on iOS. Adjacent on backend, realtime, and AI when the product requires it — not
+              a dump of every tool I have opened.
             </p>
             <div className="craft-grid">
               {craft.map((col) => (
@@ -277,63 +322,30 @@ export function HomePage() {
           </section>
 
           <section className="section" id="featured">
-            <p className="kicker">Featured</p>
-            <h2>Evidence, not a CV dump.</h2>
+            <p className="kicker">Featured projects</p>
+            <h2>Problem, ownership, result.</h2>
             <div className="feature-grid">
-              <article className="feature-card">
-                <p className="app-role">Open source</p>
-                <h3>RVNetwork</h3>
-                <p>
-                  Protocol-oriented Swift networking on URLSession. Routes describe method, path,
-                  and task; the service returns <code>Result</code> so view models stay testable
-                  and encoding stays in one place.
-                </p>
-                <p>
-                  Built so teams stop copy-pasting URLSession boilerplate and can inject a fake
-                  client in tests.
-                </p>
-                <a
-                  className="app-link"
-                  href="https://github.com/RaviRanjan-11/RVNetwork"
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  GitHub →
-                </a>
-              </article>
-              <article className="feature-card">
-                <p className="app-role">Product · Oodles</p>
-                <h3>Wethio Wallet</h3>
-                <p>
-                  iOS wallet and marketplace flows: authentication, transaction surfaces, and the
-                  reliability bar users expect when money is involved.
-                </p>
-                <a
-                  className="app-link"
-                  href="https://apps.apple.com/in/app/wethio-wallet/id1506566578"
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  App Store →
-                </a>
-              </article>
-              <article className="feature-card">
-                <p className="app-role">EdTech · Physics Wallah</p>
-                <h3>Auth at consumer scale</h3>
-                <p>
-                  Authentication and onboarding on a high-traffic education app. Publicly: 70k+
-                  users on those flows. Internals stay internal — the interesting part is ownership
-                  of a path that cannot fail quietly.
-                </p>
-                <a
-                  className="app-link"
-                  href="https://apps.apple.com/in/app/physics-wallah/id1641443555"
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  App Store →
-                </a>
-              </article>
+              {featured.map((p) => (
+                <article className="feature-card" key={p.name}>
+                  <p className="app-role">{p.kicker}</p>
+                  <h3>{p.name}</h3>
+                  <p>
+                    <strong>Problem.</strong> {p.problem}
+                  </p>
+                  <p>
+                    <strong>Role.</strong> {p.role}
+                  </p>
+                  <p>
+                    <strong>Architecture.</strong> {p.architecture}
+                  </p>
+                  <p>
+                    <strong>Result.</strong> {p.result}
+                  </p>
+                  <a className="app-link" href={p.href} target="_blank" rel="noreferrer">
+                    {p.link}
+                  </a>
+                </article>
+              ))}
             </div>
           </section>
 
@@ -379,23 +391,23 @@ export function HomePage() {
             <p className="kicker">Architecture</p>
             <h2>How I prefer to split an iOS app.</h2>
             <p className="lede">
-              UI describes state. Domain owns rules. Data talks to the world. Dependencies point
-              inward. Simple before clever.
+              UI describes state. View models coordinate. Use cases own rules. Data talks to REST
+              or a socket. Dependencies point inward so tests do not boot UIKit. Simple before
+              clever — not TCA on a settings screen.
             </p>
-            <div className="arch">
-              <div>
-                <strong>UI</strong>
-                SwiftUI / UIKit
-              </div>
-              <div>
-                <strong>Domain</strong>
-                Use cases
-              </div>
-              <div>
-                <strong>Data</strong>
-                REST · cache
-              </div>
-            </div>
+            <pre className="arch-diagram">{`SwiftUI / UIKit UI
+        │
+        ▼
+    ViewModel
+        │
+        ▼
+    Use cases
+        │
+   ┌────┴────┐
+   ▼         ▼
+API client  WebSocket
+   │         │
+Backend   Realtime / AI`}</pre>
           </section>
 
           <section className="section" id="work">
@@ -423,12 +435,20 @@ export function HomePage() {
           </section>
 
           <section className="section" id="writing">
-            <p className="kicker">Writing</p>
-            <h2>Prove the thinking.</h2>
+            <p className="kicker">Technical writing</p>
+            <h2>How I think, in public.</h2>
             <p className="lede">
-              Essays on Medium. Long-form interview notes in the handbook — Swift, SwiftUI,
-              concurrency, architecture.
+              Short notes on Medium. The handbook is the long interview reference — concurrency,
+              SwiftUI state, architecture.
             </p>
+            <ul className="article-list">
+              <li>Swift concurrency: async/await vs actors</li>
+              <li>Architecting a large SwiftUI application</li>
+              <li>Realtime / WebSocket patterns on iOS</li>
+              <li>SwiftUI performance: common mistakes</li>
+              <li>UIKit → SwiftUI without a rewrite weekend</li>
+              <li>Protocol-oriented networking (RVNetwork)</li>
+            </ul>
             <p className="social">
               <a href="https://medium.com/@r.ranjanchn" target="_blank" rel="noreferrer">
                 Medium →
@@ -457,8 +477,10 @@ export function HomePage() {
             <p className="kicker">Now</p>
             <h2>Currently exploring.</h2>
             <p className="lede">
-              Still iOS-first. These are the adjacent systems I am building with when the product
-              needs a server, data, or an AI surface.
+              Exploring senior iOS / mobile engineering in Europe, with particular interest in
+              Germany. Deepening SwiftUI, Swift Concurrency, Observation, and modern app
+              architecture — plus Node, MongoDB, and LLM surfaces when the product needs a server
+              or an AI path.
             </p>
             <div className="tags">
               <span>SwiftUI Observation</span>
@@ -509,14 +531,17 @@ export function HomePage() {
                 <p className="kicker">Contact</p>
                 <h2>Let’s build something.</h2>
                 <p className="lede">
-                  Open to Senior / Staff / Lead iOS, mobile engineering, and product-minded
-                  roles. Based in India; looking at Europe.
+                  Open to Senior / Staff / Lead iOS and mobile engineering in Germany and Europe.
                 </p>
                 <p className="social">
                   <a href="mailto:r.ranjanchn@gmail.com">r.ranjanchn@gmail.com</a>
                   <a href="tel:+919711734151">+91 97117 34151</a>
-                  <a href="https://medium.com/@r.ranjanchn" target="_blank" rel="noreferrer">
-                    Medium
+                  <a href="/Ravi-Ranjan-iOS.pdf">Resume</a>
+                  <a href="https://github.com/RaviRanjan-11" target="_blank" rel="noreferrer">
+                    GitHub
+                  </a>
+                  <a href="https://www.linkedin.com/in/rranjanchchn/" target="_blank" rel="noreferrer">
+                    LinkedIn
                   </a>
                 </p>
               </div>
@@ -544,6 +569,16 @@ export function HomePage() {
 
           <footer>
             <span>Ravi Ranjan · Senior iOS Engineer</span>
+            <span className="social">
+              <a href="/Ravi-Ranjan-iOS.pdf">Resume</a>
+              <a href="https://github.com/RaviRanjan-11" target="_blank" rel="noreferrer">
+                GitHub
+              </a>
+              <a href="https://www.linkedin.com/in/rranjanchchn/" target="_blank" rel="noreferrer">
+                LinkedIn
+              </a>
+              <a href="mailto:r.ranjanchn@gmail.com">Email</a>
+            </span>
             <span>© {new Date().getFullYear()}</span>
           </footer>
         </div>
