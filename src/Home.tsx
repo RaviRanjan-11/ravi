@@ -239,6 +239,9 @@ export function HomePage() {
                 <a className="btn" href="/Ravi-Ranjan-iOS.pdf">
                   Download resume
                 </a>
+                <Link className="btn ghost" to="/prep">
+                  10-day interview prep
+                </Link>
                 <a className="btn ghost" href="#featured">
                   View work
                 </a>
@@ -455,8 +458,8 @@ Network   Persistence`}</pre>
             <p className="kicker">Technical writing</p>
             <h2>In public.</h2>
             <p className="lede">
-              Interview notes on Medium. The handbook is the longer reference — Swift concurrency,
-              SwiftUI state, architecture.
+              Interview notes on Medium. Ten days of problem-first senior interview prep, then a
+              longer handbook.
             </p>
             <ul className="article-list">
               {writing.map((post) => (
@@ -467,6 +470,9 @@ Network   Persistence`}</pre>
                 </li>
               ))}
               <li>
+                <Link to="/prep">10-day senior iOS interview prep — problems first</Link>
+              </li>
+              <li>
                 <Link to="/handbook">iOS handbook — concurrency, SwiftUI, architecture</Link>
               </li>
             </ul>
@@ -474,6 +480,7 @@ Network   Persistence`}</pre>
               <a href="https://medium.com/@r.ranjanchn" target="_blank" rel="noreferrer">
                 All Medium posts →
               </a>
+              <Link to="/prep">10-day prep →</Link>
               <Link to="/handbook">iOS handbook →</Link>
             </p>
           </section>

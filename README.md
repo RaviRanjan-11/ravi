@@ -4,6 +4,8 @@ Personal site: [raviranjan.space](https://raviranjan.space)
 
 Handbook: [raviranjan.space/handbook](https://raviranjan.space/handbook)
 
+10-day senior iOS prep: [raviranjan.space/prep](https://raviranjan.space/prep)
+
 ## Run locally
 
 ```bash

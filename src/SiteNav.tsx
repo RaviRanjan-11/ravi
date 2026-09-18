@@ -28,6 +28,9 @@ export function SiteNav({ home = false }: { home?: boolean }) {
           <a href={to('#writing')} onClick={() => setOpen(false)}>
             Writing
           </a>
+          <Link to="/prep" onClick={() => setOpen(false)}>
+            Prep
+          </Link>
           <Link to="/handbook" onClick={() => setOpen(false)}>
             Handbook
           </Link>

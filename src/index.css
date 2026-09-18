@@ -90,7 +90,7 @@ img {
 .nav nav {
   display: flex;
   align-items: center;
-  gap: 22px;
+  gap: 16px;
   font-size: 0.84rem;
   color: var(--muted);
 }
@@ -810,6 +810,173 @@ footer .social {
   color: var(--link);
 }
 
+.prep-shell {
+  width: min(1080px, calc(100% - 40px));
+}
+
+.prep-lede {
+  max-width: 58ch;
+}
+
+.prep-note {
+  color: var(--muted);
+  font-size: 0.88rem;
+  line-height: 1.55;
+  margin: -8px 0 8px;
+  max-width: 58ch;
+}
+
+.prep-panel {
+  min-width: 0;
+}
+
+.prep-day-title {
+  font-family: var(--font-display);
+  font-size: 1.45rem;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  color: #fff;
+  margin: 0 0 10px;
+}
+
+.prep-problem {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 22px 22px 24px;
+  margin: 20px 0 0;
+}
+
+.prep-problem-head h3 {
+  font-family: var(--font-display);
+  font-size: 1.18rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: #fff;
+  margin: 0 0 14px;
+}
+
+.prep-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  font-size: 0.75rem;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+
+.prep-problem h4 {
+  font-family: var(--font-display);
+  font-size: 0.92rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+  margin: 18px 0 8px;
+}
+
+.prep-md {
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  padding: 0;
+}
+
+.prep-md p,
+.prep-md li {
+  font-size: 0.92rem;
+}
+
+.prep-think {
+  padding-left: 1.15em;
+  margin: 0 0 16px;
+  color: var(--muted);
+  font-size: 0.92rem;
+  line-height: 1.55;
+}
+
+.prep-think li {
+  margin-bottom: 6px;
+}
+
+.prep-reveal {
+  margin-top: 4px;
+}
+
+.prep-followups {
+  padding-left: 1.15em;
+  color: var(--muted);
+  font-size: 0.92rem;
+  line-height: 1.5;
+}
+
+.prep-followups li {
+  margin-bottom: 12px;
+}
+
+.prep-fq {
+  color: var(--ink);
+  font-weight: 500;
+  margin-bottom: 4px;
+}
+
+.prep-fa {
+  color: var(--muted);
+}
+
+.prep-teaches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  list-style: none;
+  padding: 0;
+  margin: 0 0 16px;
+}
+
+.prep-teaches li {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 5px 10px;
+  font-size: 0.74rem;
+  color: var(--muted);
+}
+
+.prep-mock-banner {
+  background: #ffffff0d;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 12px 14px;
+  color: var(--ink);
+  font-size: 0.88rem;
+  line-height: 1.5;
+  margin: 12px 0 8px;
+}
+
+.prep-section {
+  margin-top: 28px;
+}
+
+.prep-section-title {
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+  color: #fff;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 4px;
+}
+
+.prep-section-title span {
+  font-family: var(--font-body);
+  font-size: 0.75rem;
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.prep-problem .btn {
+  margin-top: 8px;
+}
+
 @media (max-width: 760px) {
   .split,
   .app-grid,
@@ -867,7 +1034,7 @@ footer .social {
 
   .handbook-toc {
     position: static;
-    max-height: 200px;
+    max-height: 280px;
   }
 
   footer {
