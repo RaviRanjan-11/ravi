@@ -833,11 +833,17 @@ footer .social {
   transform: translate(-50%, 0);
 }
 
-.sel-share.open {
-  width: min(340px, calc(100vw - 24px));
-  padding: 14px;
+.sel-share.dock {
+  top: 50%;
+  right: 24px;
+  left: auto;
+  transform: translateY(-50%);
+  width: min(340px, calc(100vw - 32px));
+  padding: 16px;
   border-radius: 16px;
   align-items: stretch;
+  max-height: calc(100vh - 32px);
+  overflow: auto;
 }
 
 .sel-share-btn {
@@ -864,11 +870,25 @@ footer .social {
   width: 100%;
 }
 
+.sel-share-kicker {
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--link);
+}
+
 .sel-share-form .btn {
   justify-self: start;
   margin-top: 0;
   padding: 8px 14px;
   font-size: 0.82rem;
+}
+
+.sel-share-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
 .sel-share-quote {
@@ -907,6 +927,15 @@ footer .social {
 
 .sel-share-err {
   color: #ff8a80;
+}
+
+@media (max-width: 760px) {
+  .sel-share.dock {
+    right: 12px;
+    left: 12px;
+    width: auto;
+    transform: translateY(-50%);
+  }
 }
 
 .prep-shell {

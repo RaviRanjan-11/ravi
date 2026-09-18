@@ -1,12 +1,17 @@
 import { useEffect, useRef, useState } from 'react'
+import { useLocation } from 'react-router-dom'
 
 const SUBMIT_URL = 'https://formsubmit.co/ajax/r.ranjanchn@gmail.com'
 const MAX_QUOTE = 1200
 
-type Pop = { text: string; x: number; y: number; below: boolean }
-type Status = 'idle' | 'form' | 'sending' | 'sent' | 'error'
+type Chip = { text: string; x: number; y: number; below: boolean }
+type Status = 'idle' | 'chip' | 'form' | 'sending' | 'sent' | 'error'
 
-function quoteFromSelection(): Pop | null {
+function allowedPath(path: string) {
+  return path === '/handbook' || path.startsWith('/handbook/') || path === '/prep' || path.startsWith('/prep/')
+}
+
+function quoteFromSelection(): Chip | null {
   const sel = window.getSelection()
   if (!sel || sel.isCollapsed || !sel.rangeCount) return null
 
@@ -20,16 +25,18 @@ function quoteFromSelection(): Pop | null {
   const rect = sel.getRangeAt(0).getBoundingClientRect()
   if (!rect.width && !rect.height) return null
 
-  const pad = 160
+  const pad = 72
   const x = Math.min(Math.max(rect.left + rect.width / 2, pad), window.innerWidth - pad)
-  const below = rect.top < 72
+  const below = rect.top < 56
   const y = below ? rect.bottom + 10 : Math.max(rect.top - 10, 12)
 
   return { text: text.slice(0, MAX_QUOTE), x, y, below }
 }
 
 export function SelectionShare() {
-  const [pop, setPop] = useState<Pop | null>(null)
+  const { pathname } = useLocation()
+  const enabled = allowedPath(pathname)
+  const [chip, setChip] = useState<Chip | null>(null)
   const [status, setStatus] = useState<Status>('idle')
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
@@ -38,11 +45,18 @@ export function SelectionShare() {
   const emailRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
+    setChip(null)
+    setStatus('idle')
+  }, [pathname])
+
+  useEffect(() => {
+    if (!enabled) return
+
     let timer = 0
 
     const hide = () => {
       if (status === 'sending') return
-      setPop(null)
+      setChip(null)
       setStatus('idle')
       setNote('')
       setName('')
@@ -54,19 +68,14 @@ export function SelectionShare() {
       window.clearTimeout(timer)
       timer = window.setTimeout(() => {
         const next = quoteFromSelection()
-        setPop(next)
-        if (next) {
-          setStatus('form')
-          window.setTimeout(() => emailRef.current?.focus(), 0)
-        } else {
-          setStatus('idle')
-        }
+        setChip(next)
+        setStatus(next ? 'chip' : 'idle')
       }, 40)
     }
 
     const onPointerDown = (e: PointerEvent) => {
       if (barRef.current?.contains(e.target as Node)) return
-      if (status === 'sending') return
+      if (status === 'sending' || status === 'form') return
       hide()
     }
 
@@ -93,10 +102,10 @@ export function SelectionShare() {
       document.removeEventListener('keydown', onKey)
       document.removeEventListener('scroll', onScroll, true)
     }
-  }, [status])
+  }, [enabled, status])
 
   const send = async () => {
-    if (!pop || !email.trim()) return
+    if (!chip || !email.trim()) return
     setStatus('sending')
     try {
       const res = await fetch(SUBMIT_URL, {
@@ -112,15 +121,15 @@ export function SelectionShare() {
           name: name.trim() || 'Anonymous',
           email: email.trim(),
           page: window.location.href,
-          quote: pop.text,
+          quote: chip.text,
           note: note.trim() || '(no note)',
-          message: `"${pop.text}"\n\nPage: ${window.location.href}\n\nNote: ${note.trim() || '(none)'}`,
+          message: `"${chip.text}"\n\nPage: ${window.location.href}\n\nNote: ${note.trim() || '(none)'}`,
         }),
       })
       if (!res.ok) throw new Error('send failed')
       setStatus('sent')
       window.setTimeout(() => {
-        setPop(null)
+        setChip(null)
         setStatus('idle')
         setNote('')
         setName('')
@@ -130,17 +139,30 @@ export function SelectionShare() {
     }
   }
 
-  if (!pop) return null
+  if (!enabled || !chip) return null
+
+  const formOpen = status === 'form' || status === 'sending' || status === 'error' || status === 'sent'
 
   return (
     <div
       ref={barRef}
-      className={`sel-share open${pop.below ? ' below' : ''}`}
-      role="dialog"
+      className={`sel-share${chip.below ? ' below' : ''}${formOpen ? ' dock' : ''}`}
+      role={formOpen ? 'dialog' : 'toolbar'}
       aria-label="Send a review of the selected text"
-      style={{ left: pop.x, top: pop.y }}
+      style={formOpen ? undefined : { left: chip.x, top: chip.y }}
     >
-      {status === 'sent' ? (
+      {status === 'chip' ? (
+        <button
+          className="sel-share-btn"
+          type="button"
+          onClick={() => {
+            setStatus('form')
+            window.setTimeout(() => emailRef.current?.focus(), 0)
+          }}
+        >
+          Send review
+        </button>
+      ) : status === 'sent' ? (
         <p className="sel-share-done">Sent. Thanks.</p>
       ) : (
         <form
@@ -150,15 +172,11 @@ export function SelectionShare() {
             void send()
           }}
         >
-          <p className="sel-share-quote">“{pop.text}”</p>
+          <p className="sel-share-kicker">Review</p>
+          <p className="sel-share-quote">“{chip.text}”</p>
           <label>
             Name
-            <input
-              name="name"
-              autoComplete="name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-            />
+            <input name="name" autoComplete="name" value={name} onChange={(e) => setName(e.target.value)} />
           </label>
           <label>
             Email
@@ -183,12 +201,22 @@ export function SelectionShare() {
               onChange={(e) => setNote(e.target.value)}
             />
           </label>
-          {status === 'error' ? (
-            <p className="sel-share-err">Could not send. Try again.</p>
-          ) : null}
-          <button className="btn" type="submit" disabled={status === 'sending'}>
-            {status === 'sending' ? 'Sending…' : 'Send'}
-          </button>
+          {status === 'error' ? <p className="sel-share-err">Could not send. Try again.</p> : null}
+          <div className="sel-share-actions">
+            <button className="btn" type="submit" disabled={status === 'sending'}>
+              {status === 'sending' ? 'Sending…' : 'Send'}
+            </button>
+            <button
+              className="btn ghost"
+              type="button"
+              onClick={() => {
+                setChip(null)
+                setStatus('idle')
+              }}
+            >
+              Cancel
+            </button>
+          </div>
         </form>
       )}
     </div>
