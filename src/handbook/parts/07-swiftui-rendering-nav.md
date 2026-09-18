@@ -12,6 +12,23 @@ body evaluation
 
 If you read `player` broadly — or log the whole object in `body` — you just subscribed to everything. Fine-grained tracking only helps if `body` is actually fine-grained.
 
+## Observation versus `ObservableObject` (the version that is not a slogan)
+
+Apple did not replace Combine because the marketing deck needed a new slide. They replaced a **billing model**.
+
+With `ObservableObject`, a view that holds the object is on the hook for `objectWillChange`. `@Published var title` and `@Published var volume` both send the same “something changed.” `PlayerScreen.body` runs. `VolumeSlider.body` runs if it also holds the object. A keystroke is a full-tree tax.
+
+With `@Observable`, `body` is a tracking scope. The slider that only reads `volume` does not have a ticket for `title`. That is the depth interviewers want. Not “Observation is the new one.”
+
+What still goes wrong:
+
+* A row that takes the whole `FeedVM` and reads `vm.posts` plus `vm.nowPlaying` plus `vm.tick` has subscribed to the concert. Pass a `Post` value instead.
+* `print(player)` or touching `player` as a whole inside `body` can register more than you think. Read fields, not the bag.
+* UIKit, a `Task`, or a persistence layer that needs a stream should use `Observations { player.title }` (or equivalent), not pretend to be a view.
+* The model still has to live somewhere. `@Observable` does not own itself. The view that creates it uses `@State`. The view that receives it uses a parameter. The app-wide session uses `@Environment(Session.self)`.
+
+If they ask “should I migrate every `ObservableObject` this afternoon?” No. Migrate the screens that redraw too much, and new code. A working Combine pipeline is not an emergency.
+
 ---
 
 ## How tracking works
@@ -192,6 +209,24 @@ Why: stack is a data structure you can inspect, mutate, restore, deep-link
 ```
 
 Do not start new projects with `NavigationView`. It is the old container. Interviewers treat it as a signal that the candidate’s last tutorial was 2021.
+
+The comparison that matters is not the name. It is **whether the stack is data**.
+
+`NavigationView` plus `NavigationLink(destination: Detail(item: item))` hid the stack inside the view tree. In a lot of real apps the destination was built up front. You could not print “what is pushed.” You could not assign a path from a push notification without a hidden `NavigationLink` and a flag. Process death ate the stack unless you invented your own.
+
+`NavigationStack` is an array of `Hashable` values (or a `NavigationPath`). `NavigationLink(value:)` means “push this value.” `.navigationDestination(for: Product.self)` means “when the top of the stack is a `Product`, build this view.” Deep link: parse a URL, assign `path`. Restoration: persist a `Codable` `enum Route`. Programmatic back: `path.removeLast()`. None of that required a leaf view to know about `NavigationLink`.
+
+| | `NavigationStack` | `NavigationView` |
+| --- | --- | --- |
+| Mental model | A stack of values the scene owns | A container wrapping links |
+| Push | `path.append(product)` or `NavigationLink(value:)` | `NavigationLink(destination:)` |
+| Build the screen | `navigationDestination(for:)` | The destination view in the link |
+| Eager destinations | Destinations are built when that value is on the stack | Easy to build Detail up front without noticing |
+| Deep link | Assign the path | Simulate a tap |
+| Tabs | One stack *per tab* | Same rule, easier to get wrong |
+| New code | Yes | No |
+
+`NavigationSplitView` is the third cousin: sidebar + content + detail, selection as truth, compact size class collapsing to a stack. If you only tested iPad, iPhone will feel like a different app. That is not `NavigationStack` versus `NavigationView`. That is adaptive UI you have to mean.
 
 ## Typed navigation example
 

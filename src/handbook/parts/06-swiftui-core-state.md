@@ -4,6 +4,21 @@ SwiftUI is a declarative UI framework: you describe **what** the UI should look 
 
 It is not UIKit with a new syntax. If you write SwiftUI as if views were long-lived objects, you will lose state, over-render, and fail interviews. The rest of this part is that sentence, unpacked.
 
+## Which SwiftUI you are talking about
+
+“SwiftUI” in an interview is not one version. Say which contract you mean, or the interviewer will assume 2019 `ObservableObject` and you will talk past each other.
+
+| Era | What you actually write | What interviews still ask |
+| --- | --- | --- |
+| 2019–2022 | `ObservableObject`, `@Published`, `@StateObject`, `@ObservedObject`, `NavigationView`, `NavigationLink(destination:)` | The traps: `@ObservedObject var vm = VM()`, eager destinations, `NavigationView` |
+| iOS 16 | `NavigationStack`, `NavigationPath`, `Layout` protocol, `Transferable` | Typed navigation, programmatic `path`, why `NavigationView` is done |
+| iOS 17 | `@Observable`, `@Bindable`, `@State` holding a class, `@Environment(Type.self)`, `scrollPosition`, `onGeometryChange` | Fine-grained invalidation, “do I still need StateObject,” environment crash vs default |
+| iOS 18+ / current | Further Observation, richer scroll and tabs, `ContentUnavailableView` in more places | Same ownership questions. New APIs are extra, not a replacement for identity |
+
+This handbook’s default is **iOS 17+ Observation** for new screens, and **honest legacy** for the wrappers you will still debug. If the job’s deployment target is iOS 16, `@StateObject` is not “wrong.” It is the ownership wrapper that target has. If the target is 17+, starting a new model on `@Published` is a choice you should defend, not a default.
+
+---
+
 ---
 
 # SwiftUI Fundamentals
@@ -44,7 +59,16 @@ State lifetime           → storage keyed by view identity, not by struct insta
 
 If `body` runs again, is `@State` reset? No — not if identity is stable. State lives in the framework store. The struct is not a class, and that is not how the value persists. People who say “the struct is a class so state persists” fail this question immediately.
 
-See [View Lifecycle and Rendering](#swiftui-view-lifecycle-and-rendering) for identity, diffing, and why `onAppear` is not `viewDidAppear`.
+Identity is the other half of Observation. Same model, two views, two identities — two `@State` boxes. One view, noisy `.id` — the box is thrown away every frame.
+
+| Kind of identity | How SwiftUI decides “same view” | What resets when it changes | When you use it on purpose |
+| --- | --- | --- | --- |
+| Structural | Type + place in the tree (`if`/`else` are two places) | `@State`, `.task`, focus | Login versus Home — you *want* a new view |
+| Explicit `.id` | The value you pass | Everything tied to that identity | A new `document.id` should kill the old editor’s undo stack |
+| `ForEach` | The `Identifiable` id, or the `id:` key path | Row `@State`, row `.task` | Stable model ids. Never `items.indices` on a mutating array |
+| `AnyView` / type erasure | Weaker — you threw away the concrete type | Diffing gets pessimistic | Plugin boundaries, not list rows |
+
+`.id(UUID())` inside `body` is not a refresh trick. It is a new view on every evaluation: tasks restart, scroll jumps, the cursor dies. If you “fixed” a stale screen that way, you hid a dependency bug by burning the identity table.
 
 ---
 
@@ -156,17 +180,21 @@ List(items) { item in
 }
 ```
 
-Underneath, this is still a platform list (`UITableView` / `UICollectionView` historically; the implementation can change). You get reuse, separators, edit mode, swipe actions.
+Underneath, this is still a platform list (`UITableView` / `UICollectionView` historically; the implementation can change). You get reuse, separators, edit mode, swipe actions. That is why a `List` of a thousand rows can feel fine and a `VStack` of a thousand rows cannot: the list is allowed to throw rows away and rebuild them. A stack is not.
 
-| | List | ScrollView + LazyVStack |
+The comparison people actually need is not “List is newer.” It is “who owns reuse, chrome, and identity.”
+
+| Question | `List` | `ScrollView` + `LazyVStack` |
 | --- | --- | --- |
-| Reuse | Yes (platform list) | Lazy creation, not the same reuse |
-| Platform styling | Inset grouped etc. | You style it |
-| Swipe actions | Easy | DIY |
-| Complex stickies | Improving | More control |
-| Nested scroll | Painful | Painful |
+| What is it, really? | A system list. SwiftUI asks UIKit (or the current list engine) to show rows. You get platform spacing, separators, and edit mode whether you asked or not. | A scroll container plus a lazy stack. Children are created as they approach the visible region. There is no table view contract. You own padding, separators, and selection chrome. |
+| Reuse | Real cell reuse. A row that leaves the screen can be rebound to another item. `@State` in the row is tied to identity, not to the visual cell — if your `id` is an index, the wrong draft travels. | Lazy *creation*, not the same reuse pool. Off-screen views can be discarded. Still: unstable ids make state stick to the wrong row. Identity rules are the same even though the engine is different. |
+| Styling | Inset grouped, plain, sidebar. Fighting the default insets is a sport. If the design is “a standard iOS settings list,” stop fighting. | You style everything. That is freedom and that is work. Custom cards, mixed-width rows, a header that does not look like `UITableView` — this is why people leave `List`. |
+| Swipe, move, delete | `.swipeActions`, `.onDelete`, `.onMove` are first-class. | You build them. A drag gesture will fight the scroll view. Do not promise swipe-to-delete on a lazy stack in a six-week feature unless you have already done it once. |
+| Sticky headers | Improving, still fiddly, version-dependent. | You can pin with safe-area tricks or overlay. More control, more code. |
+| Nested scrolling | Painful. A `List` inside a `ScrollView` is two scroll views arguing. | Also painful. Nested scroll is a platform problem, not a SwiftUI-only one. |
+| When I pick it | Feeds, inboxes, settings, anything that should *feel* like iOS. | Magazines, mixed media, a timeline with custom layout the list chrome would wreck. |
 
-Reach for `List` when you want a standard iOS list. Reach for `ScrollView` + `LazyVStack` when you need custom scroll layout the list chrome would fight.
+Reach for `List` when you want a standard iOS list. Reach for `ScrollView` + `LazyVStack` when you need custom scroll layout the list chrome would fight. If the interviewer asks “why is my list slow,” I do not start with this table. I start with image size, work in `body`, and identity. The container is the second question, not the first.
 
 ## `Form` / `Section`
 
@@ -269,6 +297,16 @@ Layout modifiers worth knowing by feel: `frame`, `padding`, `offset`, `position`
 
 `offset` versus `padding` is the interview trap. Offset is a visual shift; the parent may still think the view occupies the old slot. Padding changes the size the parent sees. If a tap target is in the wrong place after an offset, that is why.
 
+Layout versus rendering versus environment, because “modifier order” is three different machines:
+
+| Kind of modifier | What it actually does | Example | What goes wrong |
+| --- | --- | --- | --- |
+| Layout | Changes the size or position the parent will use | `padding`, `frame`, `fixedSize`, `layoutPriority` | `offset` looks like layout and is not — hit targets stay behind |
+| Rendering | Paints without changing the layout report | `opacity`, `foregroundStyle`, many overlays | A full-screen dim that still receives taps because you faded pixels, not hit testing |
+| Environment | Writes a value children inherit | `font`, `colorScheme` on a container, `environment(\.myKey)` | You set `.font` on a `Text` and wonder why a sibling did not change — inheritance walks *down*, not sideways |
+
+When a screen “looks wrong after I added a background,” I draw the wrap list on paper: who is the child of whom. The background sizes to *its* child. Padding outside the background is empty. Padding inside the background is filled. That drawing is the whole modifier interview.
+
 ---
 
 # Layout
@@ -286,6 +324,20 @@ SwiftUI layout is a three-step conversation:
 `.ignoresSafeArea()` is for full-bleed media. Do not ignore safe area on text. Home Indicator versus readable content is not a style debate.
 
 `GeometryReader` gives you a size, but it takes **all proposed space** and can explode layouts. Prefer `containerRelativeFrame`, `visualEffect`, `onGeometryChange` (iOS 17+) over wrapping everything in a `GeometryReader`. If a screen suddenly became a full-height empty reader with a tiny child in the corner, you just met this view.
+
+A compact comparison for the layout questions that keep coming back:
+
+| API | What you are saying | When it bites |
+| --- | --- | --- |
+| `frame(maxWidth: .infinity)` | I will take the width you proposed | Inside a `ScrollView`, the proposal can be unbounded in the scroll axis — infinity is not a size |
+| `fixedSize()` | Ignore the proposal, use intrinsic size | Overflow, clipped text, a chip that refuses to wrap |
+| `layoutPriority` | If there is not enough space, shrink me last (or first) | Two children both at priority 1 and you still do not know who yields |
+| `Spacer` | Give me leftover space on the stack axis | No leftover inside an intrinsically sized stack in a `ScrollView` — the spacer does nothing |
+| `GeometryReader` | I want the proposed size as a number | I *become* a greedy child. Wrap it in a frame if you did not want full height |
+| `containerRelativeFrame` | Size me relative to a container (iOS 17+) | Still not a reason to measure every row on every frame |
+| `ignoresSafeArea()` | Paint into the home indicator / notch | Text under the home indicator. Fine for a photo. Not for a form |
+
+Safe area is not padding you guessed. The system tells you where the home indicator and the notch are. Full-bleed media ignores it. Body text does not. That is a HIG answer and a layout answer.
 
 ---
 
@@ -533,93 +585,217 @@ Resets when the gesture ends. For drag offsets that should not persist after the
 
 ## Comparison tables
 
+These are the SwiftUI questions that actually separate people in a room. A one-word cell is not an answer. The useful version is: who owns the data, what invalidates, what crashes, and what you would type on a new screen.
+
 ### `@State` vs `@Binding`
+
+Both talk to the same storage. The difference is **who is allowed to create it**.
+
+`@State` is a box SwiftUI keeps for this view’s identity. You create the value. You mark it `private`. When the struct is thrown away and rebuilt, the box is still there. `$count` is how you punch a hole in that box for a child.
+
+`@Binding` is only the hole. There is no box. Get and set go somewhere else. If the parent dies, the binding is a window onto nothing useful. The child must not keep a second `@State` “copy” of the same Bool — that is two UIs that drift.
 
 | | `@State` | `@Binding` |
 | --- | --- | --- |
-| Owns storage | Yes | No |
-| Typical | Parent | Child |
-| Pass down | `$value` | receives it |
+| What it actually is | Durable storage, keyed by this view’s identity | A get/set pair pointing at someone else’s storage |
+| Who owns the data | This view (conceptually). SwiftUI (physically). | The ancestor (or model) that created the `Binding` |
+| Typical place | Parent, or a leaf that truly owns a draft | Child control: toggle, text field, stepper |
+| How you pass it down | `$value` (projected value) | The child *receives* `Binding<T>` |
+| Survives `body` re-running | Yes, if identity is stable | Yes, because the owner’s storage survived |
+| Survives the view leaving the tree | No. Fresh state on the next insert. | Irrelevant — the child never owned it |
+| Classic bug | Using a plain `var` and wondering why the counter resets | Passing `isOn` instead of `$isOn` so the child cannot write back |
+| When I pick it | Local UI: sheet flag, selected tab, text draft | A row that must flip the parent’s value |
+
+If they push “can a child have `@State`?” Yes, for *its* draft. Not for the parent’s source of truth.
 
 ### `@StateObject` vs `@ObservedObject`
 
+Same `ObservableObject`. Opposite ownership. This is the most famous SwiftUI trap still in circulation because tutorials copy-pasted the wrong wrapper for years.
+
+`@StateObject` means **this view creates the object and SwiftUI must keep that instance** across struct recreations. First `init` wins for that identity. Later inits of `Model()` are thrown away.
+
+`@ObservedObject` means **someone else already has the instance**. You subscribe. You must not allocate in the same line. `@ObservedObject var model = Model()` constructs a new model every time the parent `body` runs. The form clears. The network restarts. People file it as a SwiftUI bug.
+
 | | `@StateObject` | `@ObservedObject` |
 | --- | --- | --- |
-| Creates/owns | Yes | No |
-| Init in view | Correct | Wrong |
-| Passed in | Unusual | Correct |
+| What it actually is | Ownership of an `ObservableObject` | A subscription to an `ObservableObject` you did not create |
+| Who `init`s the class | This view, once per identity | The parent, a factory, or the environment |
+| `var model = Model()` in the view | Correct with `@StateObject` | **Wrong** with `@ObservedObject` — new object every recreate |
+| Passed in from a parent | Unusual (you would be double-owning) | Correct |
+| Invalidation | Typically the whole object via `objectWillChange` | Same publisher, same coarseness |
+| When the view identity changes | New object, old one deinits | You still hold whatever was passed — or you crash if it is gone |
+| Modern replacement | `@State` + `@Observable` class | `@Bindable` parameter, or a plain `let` if you only read |
+| When I pick it | Legacy screens that still use Combine models and *this* screen owns them | Detail views, rows, anything that receives a model |
+
+If they push “why did my `TextField` reset on every keystroke of an unrelated parent?” I look for `@ObservedObject var vm = VM()` before I look at keyboard avoidance.
 
 ### `@ObservedObject` vs `@EnvironmentObject`
 
-| | Observed | EnvironmentObject |
-| --- | --- | --- |
-| Injection | Explicit parameter | Implicit tree |
-| Missing | Compile if required param | Runtime crash |
-| Testability | Easier | Need wrapper |
+Both subscribe to an `ObservableObject`. The difference is **how the object arrives**.
 
-### `@StateObject` vs `@Observable`
+A parameter is a contract. The compiler knows `Detail` needs a `Model`. A preview that forgets it does not compile. An environment object is implicit. Convenient for a session used by forty screens. Easy to forget in a preview, in a sheet presented outside the tree, in a UIKit-hosted SwiftUI view. Missing `@EnvironmentObject` is a **runtime crash**, not a compiler error.
 
-| | StateObject + OO | State + @Observable |
+| | `@ObservedObject` | `@EnvironmentObject` |
 | --- | --- | --- |
-| Invalidation | Whole object typically | Per property |
-| Combine | Yes | Not required |
-| iOS | Older | 17+ |
+| How it is injected | Explicit: `Detail(model: model)` | Implicit: `.environmentObject(model)` somewhere above |
+| Missing dependency | Usually a compile error if the initializer requires it | Crash: “No ObservableObject of type … found” |
+| What you are saying | This screen takes a model | This subtree can magically see a model |
+| Testability | Pass a fake in the initializer | Wrap in a tree that injects, or the test crashes |
+| Refactor cost | Rename a parameter | Hunt every `environmentObject` and every reader |
+| When I pick it | Feature screens, anything I will unit-test | Truly app-wide session, theme controller, a store every tab needs |
+| Modern replacement | `@Bindable var model: Model` | `@Environment(Model.self)` with `@Observable` |
+
+If they push “is environment bad?” No. Implicit *everything* is bad. A session in the environment is normal. A `CheckoutDraft` in the environment because you were tired of passing it is how two checkouts share one card number.
+
+### `@StateObject` + `ObservableObject` vs `@State` + `@Observable`
+
+This is the legacy-to-modern table. Same idea — a view owns a class — different invalidation story.
+
+`ObservableObject` plus `@Published` sends `objectWillChange` for the object. Any view that holds that object as `@ObservedObject` / `@StateObject` tends to refresh when *any* published field changes. A keystroke in `title` redraws a slider that only reads `volume`.
+
+`@Observable` records **which properties `body` read**. A write to an unread property does not invalidate that view. That is the entire reason Apple shipped Observation. Combine is no longer required for a simple screen.
+
+| | `@StateObject` + `ObservableObject` | `@State` + `@Observable` |
+| --- | --- | --- |
+| What you type | `ObservableObject` class, `@Published` fields, `@StateObject private var model = Model()` | `@Observable` class, `@State private var model = Model()` |
+| What invalidates a view | Usually the whole object | Properties that view actually read during `body` |
+| Combine | In the loop: `@Published` is a publisher | Not required |
+| Bindings into fields | `$model.name` works if `model` is `ObservedObject`/`StateObject` | Need `@Bindable var model` (or `@Bindable` on a bindable wrapper) to get `$model.name` |
+| Minimum OS | Years of production | iOS 17+ for the SwiftUI storage pattern you want |
+| What still bites you | Creating with `@ObservedObject` | `let model = Model()` inside `body` — still a new instance every time |
+| When I pick it | Code that already speaks Combine, or a deployment target below 17 | New screens. I would not start a 2026 feature on `@Published` unless the module already does. |
+
+If they push “does `@Observable` make lists free?” No. If every row reads `vm.posts` and `vm.tick`, you still redraw the world. Granularity only helps if `body` is granular.
 
 ### `@Environment` vs `@EnvironmentObject`
 
-Values vs objects; typed keys vs `ObservableObject` subclass.
+People mash these together because both say “environment.” They are different types of hole in the tree.
+
+`@Environment` reads a **value** (or a small struct) from the environment: `colorScheme`, `dismiss`, `locale`, a custom `EnvironmentKey`. Missing a custom key falls back to the key’s default. You do not crash.
+
+`@EnvironmentObject` reads a **class** that must have been injected. No default. Crash if absent.
+
+| | `@Environment` | `@EnvironmentObject` |
+| --- | --- | --- |
+| What lives in the tree | A value, often `Equatable`, copied down | A reference type |
+| How you add it | `.environment(\.myKey, value)` | `.environmentObject(object)` |
+| How you read it | `@Environment(\.myKey) var myKey` | `@EnvironmentObject var object: Type` |
+| If nobody set it | Default from `EnvironmentKey.defaultValue` | Runtime crash |
+| Typical uses | Dark mode, dismiss, layout direction, a custom `isCompact` flag | Session, app-wide store (legacy Combine objects) |
+| Modern object version | `@Environment(Session.self) var session` for `@Observable` | Still exists; I prefer the typed `@Environment(Type.self)` on 17+ |
+| When I pick it | Almost all ambient configuration | Only while the object is still `ObservableObject` |
+
+If they push “how does a nested button dismiss a sheet?” `@Environment(\.dismiss)`. Not a binding threaded through six files, and not an environment object for a single Bool.
 
 ### `@State` vs `@StateObject`
 
-Value vs `ObservableObject` instance. With Observation, `@State` can hold the class instance.
+One is for values (and, now, for `@Observable` instances). One is for `ObservableObject` instances.
+
+A `Bool`, an `Int`, a small struct draft: `@State`. An `ObservableObject` this view creates: `@StateObject`. An `@Observable` class this view creates: `@State` again — that is the modern line, and it confuses people who memorised “classes need StateObject.”
+
+| | `@State` | `@StateObject` |
+| --- | --- | --- |
+| Historical job | Value-type UI state | Own an `ObservableObject` |
+| Can it hold a class? | Yes, if the class is `@Observable` (iOS 17+) | Yes, that is what it was built for |
+| Storage | SwiftUI state table, by identity | Same table, holding a reference |
+| First init wins | Initial value used once per identity | `wrappedValue` initializer used once per identity |
+| When I pick it | Toggles, drafts, and modern observable models I own | Legacy Combine models I own |
 
 ### `@Observable` vs `ObservableObject`
 
-Fine-grained vs Combine publisher. Modern vs legacy.
+Not “new versus old” as a fashion. **How invalidation is billed.**
+
+`ObservableObject` is a Combine publisher with a convention: you `send()` on `objectWillChange`, usually via `@Published`. SwiftUI subscribes to the object, not to `name` versus `age`.
+
+`@Observable` is a macro on stored properties. Reads during a tracking scope (SwiftUI `body`, `withObservationTracking`, `Observations`) register. Writes notify that set of readers. A view that never read `age` does not care that `age` changed.
+
+| | `@Observable` | `ObservableObject` |
+| --- | --- | --- |
+| Mechanism | Property-level tracking | Object-level publisher |
+| Dependency | Observation (the runtime) | Combine |
+| Easy to over-subscribe | Reading `self` / logging the whole model in `body` | Holding the object at all |
+| Bindings | `@Bindable` | `$model.field` on StateObject/ObservedObject |
+| UIKit / non-view listeners | `Observations { }` or tracking | `sink` on `@Published` |
+| When I pick it | New models | Existing Combine stack, or a publisher graph that is not a view |
 
 ### `some View` vs `any View`
 
-Opaque vs existential.
+`body` wants **one concrete type**, hidden. That is `some View`. The compiler still knows it is `ModifiedContent<Text, _PaddingLayout>` and can specialise. Identity stays crisp.
+
+`any View` is an existential: “some unknown view.” Boxing, less specialisation, weaker identity. `AnyView` is the type-eraser people reach for when two `if` branches have different types. `ViewBuilder` already handles `if`/`else` as `_ConditionalContent`. You almost never need the box.
+
+| | `some View` | `any View` / `AnyView` |
+| --- | --- | --- |
+| What it means | Opaque: one type, name hidden | Existential: the type is unknown at the use site |
+| `body` | This is what `body` returns | Legal, slower, worse for identity |
+| `if` / `else` in a builder | Different types are OK — the builder makes a sum type | People erase both branches and pay twice |
+| Lists of mixed views | Prefer an enum + `switch` in `ViewBuilder` | `[any View]` is a last resort |
+| When I pick it | Always, until a plugin boundary forces erasure | Module plugins, or a truly dynamic child you cannot name |
+
+If they push “why is my list hitching after I wrapped rows in `AnyView`?” Because you threw away the concrete type the diff wanted. Unwrap it.
 
 ### `VStack` vs `LazyVStack`
 
-Eager vs lazy.
+Eager versus lazy is not a style choice. It is whether off-screen children exist.
 
-### `List` vs `ScrollView` + `LazyVStack`
+A `VStack` builds **every** child when the parent `body` runs. Ten thousand rows means ten thousand view structs, layout, and often images. A `LazyVStack` inside a `ScrollView` builds children as they approach the visible region. It is still not a `List`: no reuse pool in the UIKit sense, no swipe actions, no edit mode.
 
-Platform list vs custom scroll.
+| | `VStack` | `LazyVStack` |
+| --- | --- | --- |
+| When children are created | All at once | As they near the viewport |
+| Needs a `ScrollView`? | Only if content is taller than the screen — and then you should think twice | Yes. Lazy without scroll is a foot-gun |
+| Separators, swipe, selection | You build them | You build them |
+| Stable `.id` | Still matters for `@State` in children | Matters more — lazy creation plus bad ids is silent wrong-row state |
+| When I pick it | Short, known content: a card, a header, a form section | Long scrolling custom content that must not be a `List` |
+
+A `LazyVStack` of rows that each take the whole `FeedVM` as `@ObservedObject` is still not lazy in the way you hoped. Every row subscribed to the world. See Observation.
 
 ### `NavigationStack` vs `NavigationView`
 
-Current vs deprecated.
+`NavigationView` is the 2019 container. `NavigationLink(destination: SomeView())` built the destination **eagerly** in a lot of real code, and the stack was not a value you could print, restore, or deep-link.
 
-### `Task` vs `onAppear`
+`NavigationStack` is a **data structure**. You push `Hashable` values. `.navigationDestination(for:)` builds the screen. You can assign the path from a notification. You can persist a typed `[Route]` enum.
 
-`.task` cancels; `onAppear + Task` often leaks work.
+| | `NavigationStack` | `NavigationView` |
+| --- | --- | --- |
+| Status | Current | Deprecated for new work |
+| What the stack is | Values you own (`path`) | A view tree you do not really own |
+| Destination | `navigationDestination(for:)` | `NavigationLink(destination:)` |
+| Deep link | Assign `path` | Hack a link or a hidden `NavigationLink` |
+| State restoration | Codable route enum | Painful |
+| When I pick it | Every new screen | Only while deleting it from a module I inherited |
 
-### `async let` vs `TaskGroup`
+If they still write `NavigationView` in 2026, I treat it as a signal their last tutorial predates typed navigation. The navigation chapter is the worked example.
 
-Fixed vs dynamic children.
+### `.task` vs `onAppear { Task { } }`
 
-### Actor vs class
+`onAppear` is an event. It does not own work. `Task { await load() }` from that event is unstructured: pop the screen and the task keeps going, writes to a view that is gone, or holds a view model forever.
 
-Isolation vs you-handle-it.
+`.task` is a **scope**. SwiftUI starts it when the view appears for this identity and **cancels** it when the view goes away or the identity changes. `.task(id: query)` restarts when `query` changes and cancels the previous run. That is the search-box pattern.
 
-### struct vs class
+| | `.task` / `.task(id:)` | `onAppear { Task { } }` |
+| --- | --- | --- |
+| Who owns the task | The view’s appearance identity | Nobody unless you store it |
+| Cancel on disappear | Yes | No, unless you cancel by hand in `onDisappear` |
+| Restart when an input changes | `.task(id: value)` | You build that yourself and get it wrong |
+| When I pick it | Almost all loads, including per-row | Almost never for async work |
 
-Value vs reference.
+If they push “does `.task` run on MainActor?” The closure inherits the view’s actor context, usually main. Still do not decode an 8 MB JSON payload inside it. Hop off, hop back.
 
-### weak vs unowned
+### Sheets: `isPresented` vs `item:`
 
-Nil vs crash.
+`isPresented: true` plus a separate `selected: Item?` is two sources of truth. You present, then `selected` is already `nil`, and the sheet crashes on unwrap — or shows yesterday’s item.
 
-### Delegate vs closure
+`.sheet(item: $selected)` is one source: `nil` means dismissed, non-nil means this value is on screen. Identity of the item resets sheet `@State` when you present a different item. That is what you want for “open this message.”
 
-Weak many-methods vs one-shot; both can cycle.
+| | `isPresented` | `item:` |
+| --- | --- | --- |
+| Source of truth | A Bool, plus whatever else you hope stays in sync | The optional model |
+| Stale content | Easy | Harder — the item *is* the content |
+| New item, fresh state | You must `.id` yourself | Changing the item is a new presentation |
+| When I pick it | Alerts, empty confirmation, no model | Any sheet that needs the thing it is showing |
 
-### Combine vs async/await
-
-Streams vs sequential / async functions.
+The rest of the tables people paste into cheat sheets — `async let` versus `TaskGroup`, actor versus class, weak versus unowned — are language tables. They belong in Swift and concurrency. Do not answer a SwiftUI state question with “actors.” Answer with ownership.
 
 ---
 

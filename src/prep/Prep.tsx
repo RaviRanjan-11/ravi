@@ -138,7 +138,7 @@ export function Prep() {
       </p>
       <p className="prep-note">
         Aimed at four-plus years. No “what is a class.” Most items are senior or expert. Read the
-        think list out loud, then reveal.
+        think list out loud, then reveal. Select a line to email a review.
       </p>
       <div className="handbook-reader prep-reader">
         <nav className="handbook-toc" aria-label="Prep days">

@@ -163,6 +163,16 @@ Built-in fetch, built-in phases. Fine for a prototype, a settings icon, an unaut
 
 There is still a decode cost. Clip and set a frame so you do not decode a 12 megapixel photo into a 44pt row. The catalog chapter on `Image` is the same warning; it is louder here because the URL makes people forget.
 
+| | `Image` / `UIImage` you already have | `AsyncImage` |
+| --- | --- | --- |
+| Who fetches | You | The view |
+| Auth headers, cookies, custom cache | Your loader | Not really |
+| Phases | You invent placeholders | `.empty` / `.success` / `.failure` |
+| Downsample | Your job, and it must be your job in a feed | Easy to skip — then you decode full-res into a row |
+| When I pick it | Production feeds, avatars behind login, anything with a memory budget | Prototype, public URL, a settings icon |
+
+If the interviewer asks “how do you load images in SwiftUI,” `AsyncImage` is the junior half. The senior half is: cancel on identity change, downsample off main, cap the cache, and do not put `UIImage(data:)` in `body`.
+
 ---
 
 ## `EmptyView`

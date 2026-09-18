@@ -132,7 +132,7 @@ export function Handbook() {
       <p className="lede">
         A study book written the way you would explain it to a teammate — Swift, SwiftUI, UIKit,
         architecture, and the questions people actually ask. Use the chapter list; links jump to the
-        matching section.
+        matching section. Select a word or sentence to email a review.
       </p>
       <div className="handbook-reader">
         <nav className="handbook-toc" aria-label="Handbook chapters">
