@@ -1,17 +1,12 @@
 # Additional Depth — Combine, Testing, Accessibility, Gestures, Animations
 
-This chapter adds production-style examples the earlier surveys pointed to but did not fully expand. Read it after Parts V–VIII.
+This chapter is the worked examples the surveys pointed at and did not fully expand. Read it after the Combine, testing, and SwiftUI chapters — not instead of them. The code is the point. The sentences around it are what you would say in the room.
 
 ---
 
 ## Combine — worked examples
 
-```text
-Experience: 2–4
-Category: Combine
-Difficulty: Intermediate
-Importance: High
-```
+You still meet Combine in UIKit codebases and in `ObservableObject` screens. New one-shot networking should be `async throws`. These pipelines are for values over time.
 
 ### Example 1 — Basic search pipeline
 
@@ -44,25 +39,11 @@ final class SearchViewModel: ObservableObject {
 }
 ```
 
-**Line by line**
+`$query` is a publisher of every keystroke. `removeDuplicates` skips the ones that did not change the string. `debounce` waits until typing pauses — that is not `throttle`, which would emit on a cadence while the user is still typing. Each query becomes an inner publisher. `switchToLatest` cancels the previous search when a new one starts, which is the whole trick: a slow old response must not overwrite a newer one. `flatMap` would let them race. That race is the interview.
 
-```text
-$query                 → Publisher<String> from @Published
-removeDuplicates       → skip identical keystrokes
-debounce 300ms         → wait until typing pauses (not throttle)
-map → Publisher        → each query becomes a search publisher
-switchToLatest         → cancel the previous search when a new one starts
-replaceError           → UI never dies on a single failure (log separately in real apps)
-receive(on: main)      → UI assignment
-sink + weak self       → no cycle with bag stored on self
-eraseToAnyPublisher    → hide ugly nested generic types at the boundary
-```
+`replaceError(with: [])` keeps the UI alive after a single failure. In production you still log. `receive(on: main)` before you assign `results`. `sink` plus `[weak self]` because the bag lives on `self`. `eraseToAnyPublisher` hides the nested generic type at the boundary.
 
-**What happens if we use `flatMap` instead of `switchToLatest`?**  
-Out-of-order responses: a slow old query can overwrite a newer one. That is a classic interview trap.
-
-**What happens if we don't `debounce`?**  
-A request per keystroke. Battery, rate limits, jank.
+Skip debounce and you fire a request per keystroke — battery, rate limits, jank. Skip storing the cancellable and the subscription dies at the end of `init`.
 
 ### Example 2 — combineLatest for a valid form
 
@@ -74,45 +55,23 @@ Publishers.CombineLatest3($email, $password, $acceptedTerms)
     .assign(to: &$canSubmit)
 ```
 
-`assign(to: &$canSubmit)` on `@Published` does not retain `self` the old `assign(to:on:)` way. Prefer this form.
+`assign(to: &$canSubmit)` on `@Published` does not retain `self` the way the old `assign(to:on:)` did. Prefer this form. The form is valid only when all three have emitted something and the current combination passes. That is `combineLatest`, not `zip`.
 
-### Example 3 — Interview: zip vs combineLatest
+### Example 3 — zip vs combineLatest
 
-```text
-zip            → waits for ALL to emit index-aligned pairs (1st with 1st)
-combineLatest  → emits whenever ANY emits, after each has emitted once
-merge          → interleaves values of the same type
-```
+`zip` waits for all publishers to emit, then pairs first-with-first, second-with-second. `combineLatest` emits whenever any of them emits, after each has emitted at least once. `merge` interleaves values of the same type.
 
-If you `zip` two location updates with two button taps, you wait for equal counts. Usually wrong for UI. `combineLatest` is the form-validation tool.
+If you `zip` location updates with button taps, you wait for equal counts. That is almost never what a form wants. `combineLatest` is the form-validation tool. Say that with an example and the round moves on.
 
 ### Common Combine mistakes
 
-```text
-❌ assign(to: \.x, on: self) without [unowned/weak] awareness
-✅ assign(to: &$published) or sink + weak
+`assign(to: \.x, on: self)` without thinking about retain. Use `assign(to: &$published)` or `sink` plus `weak`. `flatMap` for search instead of `switchToLatest`. Never storing the bag, so nothing runs. Those three cover most of the Combine questions I have sat in.
 
-❌ flatMap for search
-✅ switchToLatest or debounce + map
-
-❌ Never cancelling (bag not stored)
-✅ Set<AnyCancellable> on the owner
-```
-
-### One-minute explanation
-
-“Combine is a stream of values over time. I subscribe with `sink` or `assign`, keep `AnyCancellable`, and pick operators for time (`debounce`) and inner publishers (`switchToLatest`). For one-shot networking I prefer `async/await`; I keep Combine when I already have a pipeline of UI events.”
+One minute in the room: Combine is a stream of values over time. I subscribe with `sink` or `assign`, keep `AnyCancellable`, and pick operators for time (`debounce`) and inner publishers (`switchToLatest`). For one-shot networking I prefer `async/await`. I keep Combine when I already have a pipeline of UI events.
 
 ---
 
 ## Testing — fuller examples
-
-```text
-Experience: 2–4
-Category: Testing
-Difficulty: Intermediate
-Importance: High
-```
 
 ### Example 1 — Swift Testing parameterized
 
@@ -131,6 +90,8 @@ struct EmailTests {
 }
 ```
 
+One test, three cases, no copy-paste. Parameterisation is why Swift Testing is worth learning even if the rest of the suite is still XCTest.
+
 ### Example 2 — XCTest expectation (legacy interviews)
 
 ```swift
@@ -147,7 +108,7 @@ func testLoadSuccess() {
 }
 ```
 
-Prefer async XCTest (`async throws`) or Swift Testing. Still recognise expectations.
+Prefer `async throws` in XCTest, or Swift Testing. Still recognise expectations — they are how a lot of interviewers learned, and how a lot of suites still wait.
 
 ### Example 3 — URLProtocol stub
 
@@ -180,7 +141,7 @@ func makeSession() -> URLSession {
 }
 ```
 
-**Why ephemeral:** no disk cache pollution between tests.
+Ephemeral so tests do not pollute a disk cache between runs. This is the seam when you want to exercise the real `URLSession` stack instead of a fake client. Either seam is fine. Hitting production in a unit test is not.
 
 ### Actor testing
 
@@ -197,37 +158,17 @@ actor Counter {
 }
 ```
 
-You must `await` isolated state. Do not add `nonisolated(unsafe)` to make tests “easier.”
+You must `await` isolated state. Do not add `nonisolated(unsafe)` to make tests easier. That is how you hide a race the test was supposed to catch.
 
-### Common testing mistakes
-
-```text
-❌ Hitting production APIs in unit tests
-✅ Stub URLProtocol or inject a fake client
-
-❌ Sleeping 0.5s “to be safe”
-✅ await the task; inject a fake clock
-
-❌ UI tests for every ViewModel branch
-✅ Unit-test VM; UI-test login + one happy path
-```
+Sleeping 0.5 seconds “to be safe” is the other classic. Await the task. Inject a fake clock. UI tests for every view-model branch will flake; unit-test the view model and UI-test login plus one happy path.
 
 ---
 
 ## Accessibility — interview depth
 
-```text
-Experience: 2–4
-Category: SwiftUI
-Difficulty: Intermediate
-Importance: High
-```
+iOS is used with VoiceOver, Dynamic Type, Switch Control, Reduce Motion, and colour filters. Accessibility is not a polish pass. It is how many people use the product at all. Good teams also treat it as a testing surface — identifiers you can find in XCUITest.
 
-### Why it exists
-
-iOS is used with VoiceOver, Dynamic Type, Switch Control, Reduce Motion, and colour filters. Accessibility is **not** a polish pass; it is how many people use the product at all. Good teams also treat it as a testing surface (identifiers).
-
-### Labels vs traits vs values
+Labels, traits, and values are the VoiceOver API. A filled heart that only exists as an image needs a name and a selected trait, or it is a mystery control.
 
 ```swift
 Image(systemName: "heart.fill")
@@ -235,9 +176,7 @@ Image(systemName: "heart.fill")
     .accessibilityAddTraits(.isSelected)
 ```
 
-Decorative images: `.accessibilityHidden(true)` so VoiceOver skips them.
-
-### Combine children
+Decorative images get `.accessibilityHidden(true)` so VoiceOver skips them. Combining children turns a row of “Balance” and “$12.00” into one stop instead of two:
 
 ```swift
 HStack {
@@ -247,19 +186,9 @@ HStack {
 .accessibilityElement(children: .combine)
 ```
 
-Otherwise VoiceOver may stop twice on one row.
+Dynamic Type: `.font(.body)` scales. `minimumScaleFactor(1)` as a strategy for body text is how you silently shrink instead of wrapping. Fixed `font(.system(size: 12))` fails interviews at accessibility-conscious companies, and it fails users on an iPhone with Large Accessibility Sizes.
 
-### Dynamic Type
-
-```swift
-Text("Hello")
-    .font(.body)          // scales
-    .minimumScaleFactor(1) // don't silently shrink body text as a strategy
-```
-
-Fixed `font(.system(size: 12))` **fails** interviews at accessibility-conscious companies.
-
-### Reduce motion
+Reduce Motion is an environment value. Honour it:
 
 ```swift
 @Environment(\.accessibilityReduceMotion) var reduceMotion
@@ -269,30 +198,15 @@ withAnimation(reduceMotion ? nil : .spring()) {
 }
 ```
 
-### Hit targets
+Hit targets: 44 points minimum. Two tiny icon buttons eight points apart will be failed in review and in the room.
 
-44pt minimum. Don’t put two tiny icon buttons 8pt apart.
+App Store review rarely rejects for this. Enterprise and government RFPs do. You also cannot UI-test what you cannot identify.
 
-### What happens if we don't
-
-App Store review rarely rejects, but enterprise and government RFPs do. Also: you cannot UI-test what you cannot identify.
-
-### Interview question
-
-**Q: How do you make a custom slider accessible?**  
-**Expected:** `accessibilityValue`, `accessibilityAdjustableAction`, traits `.adjustable`, label.  
-**Wrong:** “It’s a visual control so VoiceOver users won’t use it.”
+If they ask how you make a custom slider accessible: `accessibilityValue`, `accessibilityAdjustableAction`, the `.adjustable` trait, a label. “It is visual, so VoiceOver users will not use it” is how you end the round.
 
 ---
 
 ## Gestures — interview depth
-
-```text
-Experience: 2–4
-Category: SwiftUI
-Difficulty: Intermediate
-Importance: Medium
-```
 
 ```swift
 .gesture(
@@ -302,17 +216,9 @@ Importance: Medium
 )
 ```
 
-### Gesture composition
+Composition is the interview, not the drag itself. `.gesture` is the default and may lose to buttons and scrolls. `.highPriorityGesture` wins over children. `.simultaneousGesture` lets both fire. A drag on a `ScrollView` usually loses to the scroll. `simultaneousGesture` is the careful fix; a custom list or a UIKit pan is the honest one when they fight.
 
-| Modifier | Meaning |
-| --- | --- |
-| `.gesture` | Default; may lose to buttons/scrolls |
-| `.highPriorityGesture` | Wins over children |
-| `.simultaneousGesture` | Both can fire |
-
-**Interview:** Drag vs ScrollView — the scroll view usually wins. Use `simultaneousGesture` carefully or a custom `List`/`UIKit` pan.
-
-### `@GestureState`
+`@GestureState` exists because gestures cancel:
 
 ```swift
 @GestureState private var drag: CGSize = .zero
@@ -325,24 +231,11 @@ Importance: Medium
 .offset(drag)
 ```
 
-When the gesture **ends or cancels**, `drag` resets. That is why it exists. `@State` would need manual reset and can desync on cancel.
-
-### What happens if we attach a tap to a `Button`
-
-Conflicts. Prefer `Button` action. Use `onTapGesture` on non-controls.
+When the gesture ends or cancels, `drag` resets. `@State` would need a manual reset and can desync on cancel — which is exactly when the user gets a phone call mid-drag. Attach a tap to a `Button` and you will fight the button. Prefer the `Button` action. Use `onTapGesture` on things that are not controls.
 
 ---
 
 ## Animations — interview depth
-
-```text
-Experience: 2–4
-Category: SwiftUI
-Difficulty: Intermediate
-Importance: High
-```
-
-### Example 1 — Basic
 
 ```swift
 withAnimation(.easeInOut(duration: 0.25)) {
@@ -350,19 +243,15 @@ withAnimation(.easeInOut(duration: 0.25)) {
 }
 ```
 
-Animates **all** animatable changes inside the closure.
-
-### Example 2 — Real-world: value-based implicit
+That animates every animatable change inside the closure. Implicit animation with a value is the form you want in new code:
 
 ```swift
 .animation(.default, value: isExpanded)
 ```
 
-Safer than deprecated `.animation(.default)` which attached to **all** changes in the subtree (including things you did not want animated).
+The deprecated `.animation(.default)` attached to every change in the subtree, including a fetch completing, which is how a spinner animates for reasons nobody intended. Legacy to modern: implicit without `value`, then with `value:`, because accidental animation of data loads was a real bug.
 
-**Legacy → modern:** implicit animation without `value` → with `value:` → why: accidental animation of fetches completing.
-
-### Example 3 — Interview: identity vs value
+Transitions are identity. Animation is value.
 
 ```swift
 if show {
@@ -370,23 +259,11 @@ if show {
 }
 ```
 
-`transition` applies when the view is **inserted/removed** (identity). Changing `Panel`’s text is a **value** change — use `animation`, not `transition`.
+`transition` runs when the view is inserted or removed. Changing `Panel`’s text is a value change — use `animation`, not `transition`. Mixing those two words is the most common animation miss in interviews.
 
-### `matchedGeometryEffect`
+`matchedGeometryEffect` needs a shared `Namespace` and the same `id` on both ends. During the transition both identities participate. Different id types — `String` versus `UUID` — is the pitfall that looks like “it just did not animate.”
 
-```swift
-@Namespace private var ns
-
-// in grid
-Image("cover").matchedGeometryEffect(id: item.id, in: ns)
-
-// in detail
-Image("cover").matchedGeometryEffect(id: item.id, in: ns)
-```
-
-Both must share `Namespace`. During the transition both identities participate. Pitfall: different `id` types (`String` vs `UUID`).
-
-### Transactions
+Transactions are how seniors turn animation off for a programmatic tab switch and leave it on for a user tap:
 
 ```swift
 var t = Transaction(animation: .easeInOut)
@@ -394,11 +271,7 @@ t.disablesAnimations = reduceMotion
 withTransaction(t) { tab = .settings }
 ```
 
-Seniors use transactions to **not** animate a programmatic tab switch while animating a user tap.
-
-### Performance
-
-Animating `shadow` and `blur` is more expensive than `opacity` and `offset`. Animate cheap properties. Don’t animate a 200-row list’s identity.
+Animating `shadow` and `blur` is more expensive than `opacity` and `offset`. Animate cheap properties. Do not animate a 200-row list’s identity.
 
 ---
 
@@ -412,20 +285,13 @@ extension Notification.Name {
 NotificationCenter.default.post(name: .sessionExpired, object: nil)
 ```
 
-**When to use:** process-wide events (logout) with multiple distant listeners.  
-**When not:** parent–child communication (use callbacks, Observation, environment). Notifications are stringly and unordered.
-
-**Combine:** `NotificationCenter.default.publisher(for: .sessionExpired)`.
-
-**Swift concurrency:** wrap in `NotificationCenter.default.notifications(named:)` `AsyncSequence` on modern OS.
+Process-wide events with multiple distant listeners — logout, memory warning, a session that many screens must hear. Parent–child communication should be a callback, Observation, or the environment. Notifications are stringly typed and unordered. Combine still has `NotificationCenter.default.publisher(for:)`. Modern concurrency wraps the same thing as `NotificationCenter.default.notifications(named:)` and you `for await` it.
 
 ---
 
 ## App lifecycle extras interviewers love
 
-**State restoration:** `SceneStorage`, `NSUserActivity`, SwiftUI `onContinueUserActivity`.  
-**Cold start vs URL open:** `onOpenURL` may fire after first frame — don’t assume the root is ready; queue the route.  
-**Memory warning:** `UIApplication.didReceiveMemoryWarningNotification` — drop `NSCache`, cancel prefetches. SwiftUI views don’t get this automatically.
+State restoration: `SceneStorage`, `NSUserActivity`, SwiftUI `onContinueUserActivity`. Cold start versus a URL open: `onOpenURL` may fire after the first frame. Do not assume the root is ready; queue the route. Memory warning: `UIApplication.didReceiveMemoryWarningNotification` — drop `NSCache`, cancel prefetches. SwiftUI views do not get that automatically. If you only purge in a view’s `onDisappear`, you will jetsam with the view still on screen.
 
 ---
 
@@ -447,10 +313,6 @@ WindowGroup {
 .environment(session)
 ```
 
-Login calls `AuthClient`; on success `session.establish(tokens:)`. Logout: cancel tasks, wipe Keychain, reset navigation paths **per tab**.
+Login talks to `AuthClient`. On success, `session.establish(tokens:)`. Logout cancels tasks, wipes Keychain, and resets navigation paths per tab — not just `user = nil` while a tab still holds a pushed stack with the old account.
 
-**Junior:** if/else login.  
-**Mid:** session object, error mapping, biometric unlock of Keychain.  
-**Senior:** race of double-login, token refresh actor, privacy snapshot, jailbreak policy if required, analytics identity reset.
-
----
+A junior will get the `if/else` login split. A mid-level will add a session object, map errors for the UI, and unlock Keychain with biometrics. A senior will talk about the race of a double tap on login, a token-refresh actor, the privacy snapshot on background, a jailbreak policy if the product requires one, and resetting analytics identity so the next user is not the last user. That last sentence is the difference between a screen and a session.

@@ -1,15 +1,12 @@
 # PART XI — Coding
 
-```text
-Experience: mixed (tagged per problem)
-Category: Coding
-Difficulty: Easy / Medium / Hard
-Importance: High
-```
+iOS interviews still include DSA, usually in Swift. Write clean Swift, talk complexity, handle empty inputs, and mention integer overflow when it is relevant.
 
-iOS interviews still include DSA, usually in **Swift**. Write clean Swift, talk complexity, handle empty inputs, and mention integer overflow when relevant.
+The communication is the round as much as the code. Restate the problem. Give an example. Sketch brute force so they know you can solve it. Optimise. Code. Then walk edge cases — empty, one element, duplicates, negatives — out loud, not as a comment you hope they will not ask.
 
-Interview communication: restate, example, brute force, optimise, code, test edge cases.
+## Swift Coding Problems
+
+The problems below are the ones that actually show up. I would practise them out loud, with a timer, until the first sentence is automatic.
 
 ---
 
@@ -17,12 +14,7 @@ Interview communication: restate, example, brute force, optimise, code, test edg
 
 ### Two Sum
 
-```text
-Experience: 0–2
-Difficulty: Easy
-```
-
-Return indices of two numbers that add to `target`.
+Given an array of integers and a target, return the indices of two numbers that add up to the target. I would ask whether there is always a pair, whether I may use the same element twice, and whether the array is sorted — because sorted would change the answer.
 
 ```swift
 func twoSum(_ nums: [Int], _ target: Int) -> [Int] {
@@ -37,16 +29,11 @@ func twoSum(_ nums: [Int], _ target: Int) -> [Int] {
 }
 ```
 
-Time O(n), space O(n).  
-**Trap:** nested loops O(n²) only for tiny n.  
-**Follow-up:** Three sum; sorted two pointers if allowed to sort.
+How I’d talk this. “Brute force is a nested loop, O(n²). I will walk once and remember what I have seen. For each number I ask whether `target - n` is already in the dictionary. If it is, those two indices are the answer. If not, I record this number’s index. That is O(n) time and O(n) space. Nested loops are fine for tiny n; I would not lead with them.” Follow-up they love: three sum, or two pointers if I am allowed to sort — sorting loses the original indices unless I keep them.
 
 ### Contains duplicate
 
-```text
-Experience: 0–2
-Difficulty: Easy
-```
+True if any value appears twice. Hash set, walk once, return on the first failed insert.
 
 ```swift
 func containsDuplicate(_ nums: [Int]) -> Bool {
@@ -58,14 +45,11 @@ func containsDuplicate(_ nums: [Int]) -> Bool {
 }
 ```
 
-O(n) time, O(n) space.
+How I’d talk this. “I could sort and compare neighbours — O(n log n), no extra average space if we sort in place. The set is O(n) time and O(n) space, and it fails fast. `insert` returns `(inserted: Bool, …)` so I do not look up twice.” Empty array: false. One element: false.
 
 ### Product of array except self
 
-```text
-Experience: 2–4
-Difficulty: Medium
-```
+For each index, the product of every other element. They often add: no division, O(n) time.
 
 ```swift
 func productExceptSelf(_ nums: [Int]) -> [Int] {
@@ -85,14 +69,11 @@ func productExceptSelf(_ nums: [Int]) -> [Int] {
 }
 ```
 
-O(n) time, O(1) extra besides output.
+How I’d talk this. “If I may divide, product of all over `nums[i]` — zeros break that, so I would special-case zeros anyway. Without division I prefix from the left, then multiply a right suffix on the way back. Extra memory besides the output is O(1). I will mention zeros out loud so they know I saw them.”
 
 ### Maximum subarray (Kadane)
 
-```text
-Experience: 2–4
-Difficulty: Medium
-```
+Largest sum of a contiguous subarray. The array can hold negatives.
 
 ```swift
 func maxSubArray(_ nums: [Int]) -> Int {
@@ -106,7 +87,7 @@ func maxSubArray(_ nums: [Int]) -> Int {
 }
 ```
 
-O(n) time, O(1) space.
+How I’d talk this. “At each index I decide whether to extend the streak or start again at this element. That is Kadane. O(n) time, O(1) space. Empty is undefined here so I start from `nums[0]` — I would confirm the array is non-empty. Divide and conquer is the follow-up if they want O(n log n) on purpose.”
 
 ---
 
@@ -114,10 +95,7 @@ O(n) time, O(1) space.
 
 ### Valid palindrome (alphanumeric)
 
-```text
-Experience: 0–2
-Difficulty: Easy
-```
+Ignore case and ignore anything that is not a letter or a number. Two pointers from the ends.
 
 ```swift
 func isPalindrome(_ s: String) -> Bool {
@@ -131,12 +109,11 @@ func isPalindrome(_ s: String) -> Bool {
 }
 ```
 
+How I’d talk this. “I would rather skip in place than allocate a filtered array, but allocating is easier to get right on a whiteboard and fine at interview n. Empty string is a palindrome. I will mention that Swift `Character` is not a UTF-16 code unit, in case they poke Unicode.”
+
 ### Reverse string in place
 
-```text
-Experience: 0–2
-Difficulty: Easy
-```
+The input is a mutable array of characters. Swap from both ends until the pointers meet.
 
 ```swift
 func reverse(_ s: inout [Character]) {
@@ -148,12 +125,11 @@ func reverse(_ s: inout [Character]) {
 }
 ```
 
+How I’d talk this. “O(1) extra space is the point. I will not reverse via `String` concatenation. Odd length: the middle character stays.”
+
 ### Longest substring without repeating characters
 
-```text
-Experience: 2–4
-Difficulty: Medium
-```
+Length of the longest substring with all unique characters. Sliding window, last-seen index.
 
 ```swift
 func lengthOfLongestSubstring(_ s: String) -> Int {
@@ -171,14 +147,11 @@ func lengthOfLongestSubstring(_ s: String) -> Int {
 }
 ```
 
-O(n) time. **Note:** `Array(s)` is fine for interviews; mention Character vs Unicode.
+How I’d talk this. “The window is `[start, i]`. When I see a character already in the window, I move `start` past its last index. O(n) time. `Array(s)` is honest on a whiteboard; I would mention Character versus Unicode scalar if they care about grapheme clusters. All unique: n. All the same: 1.”
 
 ### Container with most water
 
-```text
-Experience: 2–4
-Difficulty: Medium
-```
+Heights of vertical lines. Pick two lines that trap the most water with the x-axis.
 
 ```swift
 func maxArea(_ h: [Int]) -> Int {
@@ -191,16 +164,15 @@ func maxArea(_ h: [Int]) -> Int {
 }
 ```
 
+How I’d talk this. “Width is largest at the ends, so I start there. Area is min height times width. I move the shorter pointer, because moving the taller one cannot increase the min. O(n). Brute force every pair is O(n²) and I would say that first so they see I can solve it.”
+
 ---
 
 ## Stack / queue
 
 ### Valid parentheses
 
-```text
-Experience: 0–2
-Difficulty: Easy
-```
+`()`, `[]`, `{}` — nested, mixed, must close in order.
 
 ```swift
 func isValid(_ s: String) -> Bool {
@@ -217,12 +189,11 @@ func isValid(_ s: String) -> Bool {
 }
 ```
 
+How I’d talk this. “Opens go on a stack. A close must match the most recent open. Leftover opens at the end are invalid. `popLast` on empty is nil, so a close with an empty stack fails. This is the problem I would use to show I know a stack is just an array with append and pop.”
+
 ### Min stack
 
-```text
-Experience: 2–4
-Difficulty: Medium
-```
+Push, pop, top, and get-minimum, all O(1).
 
 ```swift
 final class MinStack {
@@ -242,12 +213,11 @@ final class MinStack {
 }
 ```
 
+How I’d talk this. “One stack is not enough for O(1) min after pops. I keep a parallel stack of the min so far. Each push stores `min(val, currentMin)`. Space is O(n). I force-unwrap `top` and `getMin` the way LeetCode does; in production I would make them optional or trap on empty.”
+
 ### Implement queue with stacks
 
-```text
-Experience: 2–4
-Difficulty: Easy
-```
+Enqueue and dequeue using only stacks. Amortised O(1) dequeue.
 
 ```swift
 struct Queue<T> {
@@ -265,7 +235,7 @@ struct Queue<T> {
 }
 ```
 
-Amortised O(1).
+How I’d talk this. “Inbound stack receives pushes. When I dequeue and the outbound stack is empty, I pour inbound into outbound — that reverses order, which is what a queue wants. Each element moves at most twice, so amortised O(1). Worst-case dequeue is O(n) on a pour. I would say that before they ask.”
 
 ---
 
@@ -282,12 +252,11 @@ final class ListNode {
 }
 ```
 
+Lists are classes. Identity is `===`. I would write the node type first so we agree on the API.
+
 ### Reverse linked list
 
-```text
-Experience: 0–2
-Difficulty: Easy
-```
+Iterative: three pointers, walk once.
 
 ```swift
 func reverseList(_ head: ListNode?) -> ListNode? {
@@ -303,12 +272,11 @@ func reverseList(_ head: ListNode?) -> ListNode? {
 }
 ```
 
+How I’d talk this. “I hold previous, current, and the next I am about to lose. Flip `next`, advance. Empty list and single node fall out of the loop. Recursive is pretty and uses O(n) stack; I would mention it, then ship iterative.”
+
 ### Merge two sorted lists
 
-```text
-Experience: 0–2
-Difficulty: Easy
-```
+Dummy head so I do not special-case the first node.
 
 ```swift
 func merge(_ a: ListNode?, _ b: ListNode?) -> ListNode? {
@@ -328,12 +296,11 @@ func merge(_ a: ListNode?, _ b: ListNode?) -> ListNode? {
 }
 ```
 
+How I’d talk this. “Walk both, splice the smaller node, hang the remainder when one list empties. Dummy head keeps the code honest. I am mutating the existing nodes, not allocating copies — I would confirm that is allowed.”
+
 ### Detect cycle (Floyd)
 
-```text
-Experience: 2–4
-Difficulty: Easy
-```
+Slow pointer, fast pointer. If they meet, there is a cycle.
 
 ```swift
 func hasCycle(_ head: ListNode?) -> Bool {
@@ -348,7 +315,7 @@ func hasCycle(_ head: ListNode?) -> Bool {
 }
 ```
 
-Reference equality `===` matters. Lists are classes.
+How I’d talk this. “Reference equality, `===`, not `==`. Fast moves two, slow moves one. Meeting proves a loop. Fast hitting nil proves none. Follow-up is finding the entrance: reset one pointer to head, walk both one step at a time, they meet at the start of the cycle.”
 
 ---
 
@@ -369,10 +336,7 @@ final class TreeNode {
 
 ### Max depth
 
-```text
-Experience: 0–2
-Difficulty: Easy
-```
+Empty tree is depth 0. Otherwise one plus the deeper child.
 
 ```swift
 func maxDepth(_ root: TreeNode?) -> Int {
@@ -381,12 +345,11 @@ func maxDepth(_ root: TreeNode?) -> Int {
 }
 ```
 
+How I’d talk this. “This is the definition. I would mention the iterative BFS version if they worry about stack depth on a degenerate tree. Balanced: O(log n) frames. Skewed: O(n).”
+
 ### Invert binary tree
 
-```text
-Experience: 0–2
-Difficulty: Easy
-```
+Swap the children, recurse. The meme, and still asked.
 
 ```swift
 func invert(_ root: TreeNode?) -> TreeNode? {
@@ -398,12 +361,11 @@ func invert(_ root: TreeNode?) -> TreeNode? {
 }
 ```
 
+How I’d talk this. “I have to stash one child before I overwrite it. In-place is fine. I would not clone the tree unless they ask.”
+
 ### Level order
 
-```text
-Experience: 2–4
-Difficulty: Medium
-```
+BFS. Queue of nodes, drain a level at a time.
 
 ```swift
 func levelOrder(_ root: TreeNode?) -> [[Int]] {
@@ -424,14 +386,11 @@ func levelOrder(_ root: TreeNode?) -> [[Int]] {
 }
 ```
 
-`removeFirst()` on `Array` is O(n); mention `Deque` or index pointer in a senior follow-up.
+How I’d talk this. “`removeFirst()` on `Array` is O(n). At interview n it does not matter. On a senior follow-up I would use an index pointer or a deque. Snapshot `q.count` before the inner loop so the level stays a level.”
 
 ### Number of islands (DFS)
 
-```text
-Experience: 2–4
-Difficulty: Medium
-```
+Grid of `'1'` land and `'0'` water. Count connected components, four-directional.
 
 ```swift
 func numIslands(_ grid: [[Character]]) -> Int {
@@ -457,12 +416,11 @@ func numIslands(_ grid: [[Character]]) -> Int {
 }
 ```
 
+How I’d talk this. “Each unvisited land starts an island. DFS sinks the island by flipping to water so I do not recount. I copy the grid so I am not mutating the caller’s data — I would ask if in-place is allowed. BFS with a queue is the same idea and safer on a huge island if recursion depth worries them.”
+
 ### Clone graph (BFS)
 
-```text
-Experience: 2–4
-Difficulty: Medium
-```
+Nodes have values and neighbours. Deep copy, including cycles.
 
 ```swift
 final class Node {
@@ -493,16 +451,15 @@ func cloneGraph(_ node: Node?) -> Node? {
 }
 ```
 
+How I’d talk this. “The map is original-to-clone. I must create the clone before I walk neighbours, or a cycle loops forever. `ObjectIdentifier` because values are not unique. Index-based queue so I do not `removeFirst`. Empty input: nil.”
+
 ---
 
 ## Recursion / backtracking / DP
 
 ### Fibonacci (DP)
 
-```text
-Experience: 0–2
-Difficulty: Easy
-```
+The nth Fibonacci number. Linear, constant space.
 
 ```swift
 func fib(_ n: Int) -> Int {
@@ -515,23 +472,17 @@ func fib(_ n: Int) -> Int {
 }
 ```
 
-O(n) time, O(1) space. Recursive exponential is the trap.
+How I’d talk this. “Naive recursion is exponential — that is the trap, and I would say so before I write it. Two variables rolling forward is O(n) time, O(1) space. I would mention overflow if n is large; Swift `Int` will trap in debug.”
 
 ### Climbing stairs
 
-```text
-Experience: 0–2
-Difficulty: Easy
-```
+n stairs, 1 or 2 at a time. Number of ways. Same recurrence as Fibonacci.
 
-Same recurrence as fib.
+How I’d talk this. “Ways(n) = ways(n-1) + ways(n-2). I would write the same loop as `fib` and say that out loud so they know I recognised it. Base: one stair is one way, two stairs is two.”
 
 ### Coin change
 
-```text
-Experience: 2–4
-Difficulty: Medium
-```
+Fewest coins to make `amount`. Unlimited supply of each denomination. −1 if impossible.
 
 ```swift
 func coinChange(_ coins: [Int], _ amount: Int) -> Int {
@@ -546,14 +497,11 @@ func coinChange(_ coins: [Int], _ amount: Int) -> Int {
 }
 ```
 
-O(amount * coins) time.
+How I’d talk this. “`dp[a]` is fewest coins for amount `a`. Unreachable starts as `amount + 1`, a sentinel bigger than any answer. Bottom-up so I do not fight recursion limits. Time is amount times number of coins. Greedy is wrong for arbitrary denominations — I would not lead with greedy unless they constrain the coin set.”
 
 ### House robber
 
-```text
-Experience: 2–4
-Difficulty: Medium
-```
+Houses in a line, cannot rob adjacent, maximise money.
 
 ```swift
 func rob(_ nums: [Int]) -> Int {
@@ -567,12 +515,11 @@ func rob(_ nums: [Int]) -> Int {
 }
 ```
 
+How I’d talk this. “At each house I skip it (keep prev1) or take it plus the best from two back. O(n) time, O(1) space. Empty: 0. Follow-up is houses in a circle — rob 0..n-2 or 1..n-1, take the max.”
+
 ### Subsets (backtracking)
 
-```text
-Experience: 2–4
-Difficulty: Medium
-```
+All subsets of a distinct-integer array.
 
 ```swift
 func subsets(_ nums: [Int]) -> [[Int]] {
@@ -593,16 +540,15 @@ func subsets(_ nums: [Int]) -> [[Int]] {
 }
 ```
 
+How I’d talk this. “At each index I either skip or take, then undo the take. That undo is the backtracking. 2^n subsets, which I would say before they ask about the output size. Duplicates in the input is a different problem — sort and skip.”
+
 ---
 
 ## Sorting / searching
 
 ### Binary search
 
-```text
-Experience: 0–2
-Difficulty: Easy
-```
+Sorted array, return index or −1.
 
 ```swift
 func search(_ nums: [Int], _ target: Int) -> Int {
@@ -616,14 +562,11 @@ func search(_ nums: [Int], _ target: Int) -> Int {
 }
 ```
 
-**Trap:** `lo + hi` overflow; use `lo + (hi - lo) / 2`.
+How I’d talk this. “`lo + hi` can overflow in other languages. I write `lo + (hi - lo) / 2` out of habit. Inclusive bounds, `lo <= hi`. Off-by-one is how this problem is actually failed. Empty array: −1.”
 
 ### Merge intervals
 
-```text
-Experience: 2–4
-Difficulty: Medium
-```
+Array of `[start, end]`. Merge overlaps, return sorted disjoint intervals.
 
 ```swift
 func merge(_ intervals: [[Int]]) -> [[Int]] {
@@ -640,16 +583,17 @@ func merge(_ intervals: [[Int]]) -> [[Int]] {
 }
 ```
 
+How I’d talk this. “Sort by start. If this interval overlaps the last one I kept, extend the end. Otherwise append. Touching endpoints: I treat `last[1] >= i[0]` as overlap — I would confirm whether `[1,2]` and `[2,3]` merge. Empty input: empty.”
+
 ---
 
 ## iOS-flavoured coding
 
+These are the ones that feel like the job.
+
 ### Deduplicate posts keeping order
 
-```text
-Experience: 0–2
-Difficulty: Easy
-```
+Pagination returned the same id twice. Keep first occurrence.
 
 ```swift
 func uniqueIDs(_ ids: [String]) -> [String] {
@@ -662,12 +606,11 @@ func uniqueIDs(_ ids: [String]) -> [String] {
 }
 ```
 
+How I’d talk this. “Set for membership, array for order. `Set` alone would scramble. I would also say I want to know why the API duplicated — cursor versus offset — not just paper over it.”
+
 ### Throttle tap (token bucket simplified)
 
-```text
-Experience: 2–4
-Difficulty: Medium
-```
+Ignore taps closer than `interval`. An actor so two taps cannot race.
 
 ```swift
 actor TapGate {
@@ -683,12 +626,11 @@ actor TapGate {
 }
 ```
 
+How I’d talk this. “The interesting bit is injecting `now` so a test does not sleep. Actor serialises the read-modify-write. This is debounce of a button, not a search box — I would not put this in a SwiftUI `body`.”
+
 ### Parse query items
 
-```text
-Experience: 0–2
-Difficulty: Easy
-```
+Pull a dictionary of query names to values from a URL.
 
 ```swift
 func query(_ url: URL) -> [String: String] {
@@ -699,6 +641,8 @@ func query(_ url: URL) -> [String: String] {
         } ?? [:]
 }
 ```
+
+How I’d talk this. “I will not split on `?` and `&` by hand. `URLComponents` exists. Duplicate keys: last wins in this version; I would ask if they want arrays. Missing value becomes empty string rather than dropping the key.”
 
 ---
 
@@ -711,124 +655,77 @@ func query(_ url: URL) -> [String: String] {
 | Linked list | O(n) | O(1) at head | |
 | Binary heap | O(1) min | O(log n) | |
 
+Say the complexity before you finish typing. Interviewers are listening for it. Average versus worst for a hash table is a senior extra sentence, not a junior requirement.
+
 ---
 
 # PART XII — Senior iOS Engineering
 
-```text
-Experience: 4+
-Category: Architecture
-Difficulty: Expert
-Importance: High
-```
+This is the chapter for people who already ship features and are now being asked how the app survives the next two years.
 
-## Production architecture
+Production architecture starts at `@main`. That is the composition root: session, API client, stores, factories. Feature modules expose a public API and keep internals to themselves. Domain types do not import SwiftUI. Side effects live at the edges — network, disk, analytics — so a view model can be tested with fakes. Feature flags belong at the root, not sprinkled through payment signing. A single session object owns auth, and logout tears it down on purpose: cancel tasks, wipe Keychain, reset navigation paths per tab. A session that “just becomes nil” leaves listeners half-alive.
 
-- **Composition root** at `@main`
-- Feature modules with public APIs
-- Domain independent of SwiftUI
-- Side effects at the edges (network, disk, analytics)
-- Feature flags
-- A single **session** object (auth) with explicit logout teardown
+Client scalability is lists, startup, teams, and builds. Lists: pagination, diffing, an image pipeline that cancels. Startup: lazy SDK init so a third-party crash reporter does not own your first frame. Teams: module ownership, CODEOWNERS, architecture decision records so the next person knows why you did not pick TCA. Builds: incremental compilation, preview targets, not one app target of 400 screens if CI is twenty-eight minutes.
 
-## Scalability (client)
+Observability is how you know any of that worked. `Logger(subsystem:category:)`, signposts around sync, breadcrumbs without PII, crash grouping, hang detection (MetricKit), network correlation IDs the backend already has. A senior who cannot say how they would find this bug in production is designing a demo.
 
-- Lists: pagination, diffing, image pipeline
-- Startup: lazy SDK init
-- Teams: module ownership, CODEOWNERS, architecture decision records
-- Build: incremental compilation, preview targets
+Performance culture is budgets: 16.7 ms frames, a launch p95, crash-free 99.x%. Measure in CI where you can. Security culture is a threat model per feature, secrets from the backend, dependency scanning, least-privilege entitlements. “We pin ATS” is not a threat model.
 
-## Observability
-
-`Logger(subsystem:category:)`, signposts around sync, breadcrumb without PII, crash grouping, hang detection (MetricKit), network correlation IDs from backend.
-
-## Performance culture
-
-Budgets: 16.7ms frames, launch p95, crash-free 99.x%. Measure in CI where possible (launch tests).
-
-## Security culture
-
-Threat model per feature. Secrets from backend. Dependency scanning. Least privilege entitlements.
-
-## Engineering trade-offs (the staff vocabulary)
-
-Every “we should rewrite” needs: cost, risk, incremental path, metrics of success. Every “new framework” needs: team skill, Apple’s direction, escape hatch.
+Every “we should rewrite” needs a cost, a risk, an incremental path, and a metric of success. Every “new framework” needs team skill, Apple’s direction, and an escape hatch. Staff vocabulary is not “I like TCA.” It is “here is the bet, here is how we unwind it.”
 
 ---
 
 # Real-World Engineering Scenarios
 
-For each: junior / mid / senior answers.
+These are the debugging stories. Answer at the altitude they hired you for, then one step above so they know you can grow.
 
 ### The API sometimes returns duplicate data. How would you handle it?
 
-**Junior:** `Set` the IDs, or filter in `ForEach`.  
-**Mid:** Deduplicate at repository; stable identity; find why the API duplicates (pagination overlap).  
-**Senior:** Cursor vs offset; server bug ticket; idempotent merge; metrics on duplicate rate.
+On a junior loop I would filter in the UI — a `Set` of ids, or `ForEach` on unique items — so the list does not crash on identity. On a mid loop I would deduplicate in the repository so every screen sees the same merge, keep stable identity, and ask whether pagination is overlapping (offset versus cursor). On a senior loop I would treat duplicates as a signal: metric the rate, file the server bug, merge idempotently, and stop pretending the client should be the source of truth for membership.
 
 ### The screen is rendering too many times. How would you investigate?
 
-**Junior:** Print in `body` (not ideal).  
-**Mid:** Instruments SwiftUI, check Observation granularity, split views.  
-**Senior:** Identity churn, environment thrash, animation transactions, Equatable, whether parent invalidates the world.
+Printing in `body` is how you confirm it, not how you finish. Instruments’ SwiftUI template, Observation granularity, split views so a slider does not invalidate the world. Seniors add identity churn, environment thrash, animation transactions, `EquatableView`, and whether the parent is invalidating everything because it read a fat model.
 
 ### The app crashes only in production.
 
-**Junior:** Look at Crashlytics line number.  
-**Mid:** dSYM, reproduce with prod-like data, threading, force unwraps, dictionary `!`.  
-**Senior:** Release vs debug optimisation, bit-identical flags, specific device, memory jetsam vs crash, metric kit, symbolicate correctly, feature-flagged code.
+Crashlytics plus a line number is the start. dSYM, reproduce with production-shaped data, threading, force unwraps, dictionary `!`. Release versus debug optimisation, bit-identical flags, a specific device, jetsam versus a real crash, MetricKit, feature-flagged code that only exists in some builds. Symbolicate correctly or you are reading fiction.
 
 ### Memory usage keeps increasing.
 
-**Junior:** I don’t know Instruments.  
-**Mid:** Graph + leaks; images; cycles in closures.  
-**Senior:** Caches without limits, abandoned URLSession tasks, hidden retain from Timer/Combine, SwiftUI identity resetting vs leaking objects, dirty COW.
+If you have never opened Allocations, say so and then open it. Graph plus leaks. Images. Cycles in closures. Then the senior layer: caches without limits, abandoned `URLSession` tasks, a `Timer` or Combine subscription that outlived the screen, SwiftUI identity resetting versus actually leaking, copy-on-write buffers that went dirty and stayed dirty.
 
 ### A network request continues after leaving the screen.
 
-**Junior:** I would cancel in `onDisappear`.  
-**Mid:** `.task` cancellation; store `Task`.  
-**Senior:** Ensure the async function actually honours cancel; don’t use detached; cancel uploads policy (should a send-message finish?).
+`onDisappear` cancel is the junior instinct and often works. `.task` cancellation is the mid-level one — store a `Task` if you started it yourself. Seniors ask whether the async function actually checks cancellation, refuse `Task.detached` for UI work, and decide policy: should a send-message finish after pop, or abort.
 
 ### A SwiftUI list is slow.
 
-**Junior:** Use `List`.  
-**Mid:** Lazy, images, IDs.  
-**Senior:** Profiling, cell complexity, UIKit interop, prefetch, downsample, avoid nested stacks.
+“Use `List`” is not an investigation. Lazy, images, stable ids. Then profile: cell complexity, UIKit interop, prefetch, downsample, nested stacks, work in `body`. The first three checks I actually run are full-resolution images on main, unstable identity, and a `VStack` of thousands of rows.
 
 ### A view unexpectedly loses its state.
 
-**Junior:** Use `@State`.  
-**Mid:** Identity: `.id`, `if/else`, `ForEach` indices.  
-**Senior:** Parent recreation with new explicit id; Navigation stack pop; `@StateObject` vs observed; Observation instance not in `@State`.
+`@State` is necessary and not sufficient. Identity: `.id`, `if/else` branches, `ForEach` on indices of a mutating array. Parent recreation with a new explicit id. Navigation pop. `@StateObject` versus something merely observed. An `@Observable` instance that was not held in `@State`, so each body made a new one.
 
 ### Two screens need to share the same state.
 
-**Junior:** `@EnvironmentObject`.  
-**Mid:** Lift state, pass bindings, or shared `@Observable` session.  
-**Senior:** Lifetime of the shared object (app vs scene vs feature); avoid globals; test seams.
+`@EnvironmentObject` is the junior button. Lift state, pass bindings, or share an `@Observable` session — and then say how long that object lives. App, scene, or feature. Globals are not a session. Tests need a seam.
 
 ### The application must support offline mode.
 
-**Junior:** UserDefaults cache.  
-**Mid:** Local store + sync flag.  
-**Senior:** Queue, conflicts, auth expiry offline, UX for stale data, background sync budget.
+UserDefaults as a cache is a prototype. A local store plus a dirty flag is a feature. A queue, a conflict policy, auth that expires while you are in a tunnel, UX for stale data, and a background-sync budget is a product. Ask which of those they actually want.
 
 ### Multiple API calls need to run concurrently.
 
-**Junior:** Two `Task`s.  
-**Mid:** `async let` / `TaskGroup`.  
-**Senior:** Limit parallelism, cancellation, partial failure (`Result` per child), don’t block MainActor.
+Two `Task`s will run. `async let` or a `TaskGroup` will run with structure. Limit parallelism so you do not open eighty image connections. Cancel the group when the screen goes. Partial failure: `Result` per child, not one throw that discards the successes. Do not sit on `MainActor` while you decode.
 
 ### An API call should be cancelled when the user leaves the screen.
 
-Covered above — this is the `.task` question. Seniors mention composed child tasks.
+This is the `.task` question. Structured child tasks cancel together. Unstructured `Task { }` in `onAppear` does not, unless you store and cancel it. Seniors mention composed children: the search task owns the decode task, and both die.
 
 ### Duplicate `onAppear` in List rows.
 
-**Junior:** Confused.  
-**Mid:** Prefetch / appear is not visibility. Use `.task(id:)`.  
-**Senior:** Don’t start exclusive resources per row appear.
+Appear is not visibility. Lists prefetch. `.task(id:)` is the tool; `onAppear` is the trap. Do not start exclusive resources — a player, a location stream — from row appear without an id that means “this row, this identity.”
 
 ---
 
@@ -836,46 +733,24 @@ Covered above — this is the `.task` question. Seniors mention composed child t
 
 ## 0–2 Years
 
-- Correct Swift: optionals, structs, basic ARC, closures without cycles in simple cases
-- A SwiftUI screen with `@State`/`@Binding`, List, navigation
-- Fetch + decode JSON with error handling
-- Honesty: “I haven’t used actors in production” is better than fiction
-- Clean code on a whiteboard
+Correct Swift: optionals, structs, basic ARC, closures that do not cycle in the simple cases. A SwiftUI screen with `@State` and `@Binding`, a `List`, navigation. Fetch and decode JSON with an error path. Honesty: “I have not used actors in production” is better than a blog-post actor. Clean code on a whiteboard.
 
-They are **not** testing whether you can design WhatsApp.
+They are not asking you to design WhatsApp. They are asking whether you will crash on nil and whether you can talk about what you wrote.
 
 ## 2–4 Years
 
-- You own a feature: architecture, tests, cancellation, loading/error/empty
-- You explain `@StateObject` vs observed vs Observation
-- You can Instruments a hang
-- You know UIKit lifecycle even if you write SwiftUI
-- You discuss trade-offs (List vs LazyVStack) with a recommendation
+You own a feature: architecture, tests, cancellation, loading and error and empty. You can explain `@StateObject` versus observed versus Observation. You can Instruments a hang. You know UIKit lifecycle even if you write SwiftUI. You discuss `List` versus `LazyVStack` with a recommendation, not a coin flip.
 
 ## 4+ Years
 
-- Systems: sync, security, modularisation, performance budgets
-- Swift 6 isolation and Sendable as design tools
-- Mentoring and migration, not only greenfield
-- “It depends” **with a decision**
+Systems: sync, security, modularisation, performance budgets. Swift 6 isolation and `Sendable` as design tools, not as compiler noise. Mentoring and migration, not only greenfield. “It depends” only counts if a decision follows.
 
 ## What separates a 2-year from a 4-year developer?
 
-Not the number of frameworks. The 4-year engineer:
-
-- Draws an ownership diagram before coding
-- Cancels work
-- Tests the seam
-- Debugs with tools
-- Knows what will hurt at 10× data
-
-The 2-year engineer can build the happy path. The 4-year engineer can explain the failure path.
+Not the number of frameworks. The four-year engineer draws an ownership diagram before coding, cancels work, tests the seam, debugs with tools, and knows what will hurt at 10× data. The two-year engineer can build the happy path. The four-year engineer can explain the failure path.
 
 ## What separates a 4-year from senior/staff?
 
-- Senior: raises the quality of **features and people** on the team; designs subsystems
-- Staff: changes **how the organisation builds iOS** (architecture, reliability, platform direction) and makes the right bets against Apple’s evolving stack
+Senior raises the quality of features and of people on the team, and designs subsystems. Staff changes how the organisation builds iOS — architecture, reliability, platform direction — and makes bets against Apple’s evolving stack.
 
-Staff is not “knows TCA and VIPER.” Staff is “picks a boring architecture the team can ship, and invests in the few sharp edges that matter (sync, media, security).”
-
----
+Staff is not “knows TCA and VIPER.” Staff is “picks a boring architecture the team can ship, and invests in the few sharp edges that matter: sync, media, security.”

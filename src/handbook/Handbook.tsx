@@ -130,8 +130,9 @@ export function Handbook() {
       <p className="kicker">Handbook</p>
       <h2>iOS &amp; SwiftUI Interview Handbook</h2>
       <p className="lede">
-        Full text from Learn27 — Swift, SwiftUI, UIKit, architecture, interviews, and cheat sheets.
-        Use the table of contents or the chapter list; links jump to the matching section.
+        A study book written the way you would explain it to a teammate — Swift, SwiftUI, UIKit,
+        architecture, and the questions people actually ask. Use the chapter list; links jump to the
+        matching section.
       </p>
       <div className="handbook-reader">
         <nav className="handbook-toc" aria-label="Handbook chapters">

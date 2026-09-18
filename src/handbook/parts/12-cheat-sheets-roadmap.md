@@ -1,6 +1,6 @@
 # FINAL — Interview Cheat Sheet
 
-Use this the night before. If you cannot explain a row in one sentence, open the matching chapter.
+Use this the night before. If you cannot explain a row in one sentence, open the matching chapter. Tables are a tool, not a substitute for the failure mode.
 
 ## Swift keywords
 
@@ -217,128 +217,105 @@ Features don’t import features.
 
 # Final Interview Roadmap
 
+This is a sequence, not a slogan. Each phase has an exit: something you can build or explain without notes. If you cannot pass the exit, do not skip ahead because the next phase sounds more senior.
+
 ## Phase 1 — 0–2 years (weeks 1–3 of a junior search)
 
-1. Swift: `let`/`var`, optionals, structs/classes, ARC, closures
-2. SwiftUI: View, stacks, List, `@State`, `@Binding`, NavigationStack
-3. Networking: URLSession + Codable + errors
-4. Persistence: UserDefaults, files; know Keychain exists
-5. 20 Easy coding problems in Swift
-6. UIKit lifecycle overview
+Live in Swift until `let`, optionals, structs versus classes, ARC, and closures are boring. Then SwiftUI: a `View`, stacks, `List`, `@State`, `@Binding`, `NavigationStack`. Networking is `URLSession` plus `Codable` plus an error path, not a third-party wrapper you cannot explain. Persistence is UserDefaults and files; know that Keychain exists even if you have not shipped it. Twenty easy coding problems in Swift. A UIKit lifecycle overview so `viewDidLoad` versus `viewWillAppear` does not freeze you.
 
-**Exit test:** Build a two-screen app that fetches a list, shows detail, handles loading/error, no retain cycle in a closure.
+You are done with this phase when you can build a two-screen app that fetches a list, shows detail, handles loading and error, and does not retain a closure. If that app still force-unwraps the JSON, you are not done.
 
 ## Phase 2 — 2–4 years
 
-1. Observation vs ObservableObject
-2. `.task`, cancellation, MainActor
-3. MVVM + DI + tests
-4. NavigationPath, sheets
-5. Memory: Instruments graph
-6. Combine reading (maintenance)
-7. Medium coding: two pointers, BFS, hash maps
+Observation versus `ObservableObject` until you can say who owns the instance. `.task`, cancellation, `MainActor`. MVVM with injected dependencies and tests. `NavigationPath` and sheets. Open Instruments and find a leak you planted. Read enough Combine to maintain a pipeline you did not write. Medium coding: two pointers, BFS, hash maps.
 
-**Exit test:** Explain why a list dropped state, fix it, add unit tests for a ViewModel, cancel on leave.
+You are done when you can explain why a list dropped state, fix it, unit-test a view model, and cancel work on leave. If you can only name `@StateObject`, keep going.
 
 ## Phase 3 — 4+ years
 
-1. Actors, Sendable, Swift 6
-2. SwiftUI identity/rendering
-3. Offline sync + security
-4. System design drills (feed, chat, banking)
-5. Modularisation and migrations
-6. Performance budgets
+Actors, `Sendable`, Swift 6 as a design tool. SwiftUI identity and rendering. Offline sync and security as product constraints. System-design drills: feed, chat, banking. Modularisation and migrations. Performance budgets you would actually put in a doc.
 
-**Exit test:** 45-minute design of offline notes + conflict policy + test strategy.
+You are done when you can spend forty-five minutes on offline notes, name a conflict policy, and say how you would test it. If the design has no process-death story, it is not finished.
 
 ## Phase 4 — Coding
 
-Daily: 1 Easy or 1 Medium in Swift. Talk out loud. Always complexity.
+One easy or one medium in Swift, daily, out loud, with complexity at the end. Silence while you type is how you fail a round you could have passed.
 
 ## Phase 5 — Architecture
 
-Sketch MVVM + repository for your last production feature. Then sketch how you would modularise it. Then attack it: what fails offline?
+Sketch MVVM plus a repository for the last feature you shipped. Then sketch how you would modularise it. Then attack it: what fails offline, what fails when the process is killed, what fails when the API duplicates ids. The attack is the senior part.
 
 ## Phase 6 — Mock interviews
 
-- Junior: 45 min Swift + SwiftUI live coding a screen
-- Mid: 45 min feature + 30 min “why is this list slow”
-- Senior: 45 min system design + 30 min behavioural debugging story
+Junior: forty-five minutes of Swift plus a live SwiftUI screen. Mid: forty-five minutes of a feature, then thirty minutes on why this list is slow. Senior: forty-five minutes of system design, then thirty minutes of a behavioural debugging story.
 
-Record yourself. If you cannot explain `@State` without saying “it stores state,” you are not done.
+Record yourself. If you cannot explain `@State` without saying only “it stores state,” you are not done. The sentence they want is ownership, identity, and what happens when either changes.
 
 ---
 
 # 30-Day Preparation Plan
 
-Assume 90 focused minutes per weekday, 3 hours per weekend day.
+Assume ninety focused minutes on a weekday and about three hours on a weekend day. The point of the calendar is not to finish the handbook. It is to have recent code in your fingers and recent explanations in your mouth on the morning of the loop.
 
 ### Days 1–4 — Swift core
 
-Optionals, value vs reference, ARC + `[weak self]`, functions/closures. End each day with 5 beginner questions aloud.
+Optionals, value versus reference, ARC and `[weak self]`, functions and closures. End each day by answering five beginner questions out loud, standing up if that keeps you honest. If you cannot say the difference between a `let` class and a `let` struct, do not start SwiftUI yet.
 
 ### Days 5–8 — SwiftUI core
 
-View, modifiers (order!), `@State`/`@Binding`, List vs VStack, NavigationStack. Build the two-screen app.
+`View`, modifier order, `@State` and `@Binding`, `List` versus `VStack`, `NavigationStack`. Build the two-screen app. The app is the exam. Reading is not.
 
-### Days 9–11 — Networking & persistence
+### Days 9–11 — Networking and persistence
 
-URLSession async, status codes, decoder, Keychain vs defaults. Add fetch to the app with errors.
+`URLSession` with async, status codes, the decoder, Keychain versus defaults. Add fetch to the app, including the error path. A successful 200 with a body you cannot decode is still a failure.
 
 ### Days 12–14 — Concurrency
 
-`async` myth, Task, `.task`, MainActor, cancellation. Add cancellation to the app.
+`async` does not mean background. `Task`, `.task`, `MainActor`, cancellation. Add cancellation to the app and prove it: leave the screen mid-flight and see the work stop.
 
-### Days 15–17 — Observation & identity
+### Days 15–17 — Observation and identity
 
-`@Observable`, `@Bindable`, `.id`, ForEach IDs, body purity. Break the app on purpose (UUID id) and fix it.
+`@Observable`, `@Bindable`, `.id`, `ForEach` ids, purity of `body`. Break the app on purpose with `.id(UUID())` in `body`, watch state reset, then fix it. That scar is the lesson.
 
-### Days 18–20 — Architecture & tests
+### Days 18–20 — Architecture and tests
 
-MVVM, inject a protocol, Swift Testing. 10 ViewModel tests.
+A view model, a protocol to inject, Swift Testing. Ten view-model tests, including failure and the loading flag. If you cannot write the fake, the view model still owns the world.
 
-### Days 21–22 — UIKit & memory
+### Days 21–22 — UIKit and memory
 
-Lifecycle table, cell reuse, Instruments leak on a deliberate cycle.
+Lifecycle until `viewDidLoad` versus appear is automatic. Cell reuse. Instruments on a leak you wrote on purpose, so you have seen the graph before someone asks.
 
 ### Days 23–24 — Coding sprint
 
-10 Easy + 8 Medium from this handbook.
+Ten easy and eight medium from this handbook, spoken. Complexity at the end of each, not as an afterthought.
 
 ### Days 25–26 — System design
 
-Instagram feed + offline notes. Timebox 45 minutes each. Write trade-offs.
+Instagram feed and offline notes, forty-five minutes each, timed. Write the trade-offs down. If you run out of time, the missing piece is usually failure modes, not another box.
 
-### Days 27–28 — Senior topics / security / performance
+### Days 27–28 — Senior topics, security, performance
 
-“App is slow” method, ATS, tokens, list jank.
+Walk “the app is slow” as a method. ATS, tokens, list jank. One threat model for a login screen on paper.
 
 ### Day 29 — Full mock
 
-Random 15 questions from each bucket + one coding + one design.
+Random questions from each bucket, one coding problem, one design. Record it. Listen once. The filler words are fine; the missing mental model is not.
 
 ### Day 30 — Cheat sheets only
 
-Rest the brain. Recite one-minute explanations:
-
-1. struct vs class  
-2. `@State` vs `@Binding` vs `@Observable`  
-3. `async`/`await`/`Task`  
-4. ARC weak/unowned  
-5. NavigationStack  
-6. How I debug a slow list  
+Rest the brain. Recite one-minute explanations: struct versus class; `@State` versus `@Binding` versus `@Observable`; `async` / `await` / `Task`; ARC weak and unowned; `NavigationStack`; how you debug a slow list. Then stop. Cramming identity at midnight is how you mix `@StateObject` with `@ObservedObject` in the room.
 
 ---
 
 ## Must-know one-minute scripts
 
-**struct vs class:** “Structs have value semantics: assignment copies. Classes have identity and shared mutation. I use structs for data and SwiftUI views, classes for UIKit objects and shared observable models. Collections of structs use copy-on-write so copies are cheap until mutation.”
+**struct vs class.** Structs have value semantics: assignment copies. Classes have identity and shared mutation. I use structs for data and SwiftUI views, classes for UIKit objects and shared observable models. Collections of structs use copy-on-write, so copies are cheap until mutation.
 
-**@State:** “Views are disposable structs. `@State` tells SwiftUI to keep storage next to the view’s identity. Mutating it invalidates `body`. I mark it `private` and pass `$value` as a Binding to children. If identity changes, state resets.”
+**@State.** Views are disposable structs. `@State` tells SwiftUI to keep storage next to the view’s identity. Mutating it invalidates `body`. I mark it `private` and pass `$value` as a `Binding` to children. If identity changes, state resets.
 
-**Concurrency:** “`async` means the function may suspend, not that it leaves the main thread. `await` is a suspension point. Tasks are scheduled on executors; they are not threads. UI stays on MainActor. I cancel with structured `.task`.”
+**Concurrency.** `async` means the function may suspend, not that it leaves the main thread. `await` is a suspension point. Tasks are scheduled on executors; they are not threads. UI stays on `MainActor`. I cancel with structured `.task`.
 
-**MVVM:** “The view renders state and sends intents. The view model holds UI state, calls services, and is testable without UIKit/SwiftUI if I inject dependencies. I avoid god view models by splitting screens and use cases.”
+**MVVM.** The view renders state and sends intents. The view model holds UI state, calls services, and is testable without UIKit or SwiftUI if I inject dependencies. I avoid god view models by splitting screens and use cases.
 
 ---
 
@@ -375,13 +352,7 @@ Rest the brain. Recite one-minute explanations:
 
 # Closing
 
-Interviews reward **precise mental models**:
-
-- Bindings vs objects
-- Identity vs state
-- Tasks vs threads
-- Ownership vs observation
-- Happy path vs cancellation, errors, and process death
+Interviews reward precise mental models: bindings versus objects, identity versus state, tasks versus threads, ownership versus observation, the happy path versus cancellation and errors and process death.
 
 If you can teach those five, you can pass most iOS loops. The rest of this handbook is the supporting evidence: syntax, internals, mistakes, and the questions people actually ask.
 

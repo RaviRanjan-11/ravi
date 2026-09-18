@@ -1,11 +1,8 @@
 # iOS & SwiftUI Interview Handbook
 
-**A complete reference for learning Swift, building iOS apps, and passing iOS interviews — from first principles to staff-level engineering judgment.**
+Written the way you would explain it to a teammate the night before a loop — Swift, SwiftUI, UIKit, architecture, and the questions people actually ask.
 
-Edition: 2026  
-Language baseline: **Swift 6.2**  
-UI baseline: **SwiftUI (iOS 26 / modern Observation)**  
-Also covered: UIKit, Combine, Core Data, and other APIs you will still meet in production and interviews
+Edition: 2026. Language: **Swift 6.2**. UI: **SwiftUI** (modern Observation), plus UIKit, Combine, and Core Data because that is what production still looks like.
 
 ---
 
@@ -106,88 +103,45 @@ This handbook is a study and teaching document. Use it to learn, revise, intervi
 
 ## How to Use This Book
 
-This is not a list of definitions. Every important idea is explained from first principles:
+This is not a glossary you recite. It is closer to sitting with someone who has run the loop and will stop you when you are about to say “it stores state.”
 
-1. What it is
-2. Why it exists
-3. Why we use it
-4. When to use it
-5. When **not** to use it
-6. Syntax, broken down token by token
-7. How it works internally
-8. What happens if you do **not** use it
-9. Common mistakes
-10. Interview traps
-11. Practical examples (basic, production, interview)
-12. Comparisons with alternatives
-13. Performance, memory, and thread-safety implications
-14. Interview questions, expected answers, and follow-ups
+Every important idea is taught the way you should answer it in a room: what the thing actually is, why Apple (or the language) bothered, what breaks if you skip it, and the trap that sounds confident until the follow-up. Syntax is there so you can write it. Internals are there so you can defend it. Examples are there so you can point at something concrete instead of waving.
+
+You do not need to finish the book in order. You do need to stop treating a chapter as done when you can name the API. Done is when you can explain the failure mode without looking.
 
 ### If you are learning SwiftUI from scratch
 
-Read in this order:
+Start with the language, not the architecture posters. `let` and optionals, then functions and closures, then structs versus classes. After that, SwiftUI views, modifiers, and the difference between `@State` (this view owns it) and `@Binding` (someone else does). Fetch JSON with `URLSession` and `Codable` so you have a screen that does something.
 
-1. Swift Fundamentals → Optionals → Functions → Closures
-2. Structs vs Classes → Protocols (lightly)
-3. SwiftUI Fundamentals → Views → Modifiers → State (`@State`, `@Binding`)
-4. Networking (URLSession + Codable)
-5. Then come back for concurrency, architecture, and Observation
-
-Do not start with VIPER, actors, or system design. Those topics assume you can already explain why a view updates.
+Then come back for concurrency, Observation, and architecture. VIPER, actors, and system design assume you can already say why a view updated. If you cannot, those chapters will feel like vocabulary, and vocabulary without a mental model fails the first follow-up.
 
 ### If you have 0–2 years of professional experience
 
-Your interviews mostly test **correctness and vocabulary**:
+Your interviews mostly test whether you write correct Swift and can talk about it. Optionals, structs versus classes, ARC on a whiteboard. A SwiftUI screen that fetches JSON. Closures that do not leak. `@State` as ownership, `@Binding` as a borrow.
 
-- Can you explain optionals, structs vs classes, and ARC at a whiteboard?
-- Can you build a screen in SwiftUI and fetch JSON?
-- Can you avoid retain cycles in closures?
-- Can you say what `@State` owns versus what `@Binding` borrows?
-
-Read every section tagged **Experience: 0–2**. Skim 2–4 sections so you are not surprised, but do not pretend mastery you do not have. Interviewers prefer a clean junior explanation over a confused senior vocabulary.
+Read the 0–2 material until you can teach it. Skim the 2–4 chapters so a mid-level question does not panic you, but do not fake mastery you do not have. Interviewers would rather hear a clean junior explanation than a confused senior word salad.
 
 ### If you have 2–4 years of experience
 
-Your interviews test **ownership, data flow, and production judgment**:
+Now the room cares who owns the object, who observes it, and what happens on rotation, backgrounding, or a navigation pop. Why is this list janky. Why did this view lose state. How do you cancel work when the user leaves. How do you test a network layer without hitting the network.
 
-- Who owns this object? Who observes it? What happens on rotation, backgrounding, or navigation pop?
-- Why is this list janky? Why did this view lose state?
-- How do you cancel work when the user leaves the screen?
-- How do you test a network layer without hitting the network?
-
-Read 2–4 sections in full. Use 4+ sections as stretch goals. You should be able to compare alternatives, not just name them.
+Read the 2–4 chapters in full. Use 4+ as stretch, not as a costume. You should be able to compare two approaches and pick one, not just name both.
 
 ### If you have 4+ years of experience
 
-Your interviews test **systems thinking**:
+They will ask “why not the other way?” more often than “what is this API?” Trade-offs, failure modes, observability, modularisation, Swift 6 isolation. SwiftUI identity and rendering, not just property wrappers. Security, offline, pagination, and what breaks at 10× data. Mentoring: can you explain the same idea at three altitudes without talking down.
 
-- Trade-offs, failure modes, observability, modularisation, Swift 6 isolation
-- SwiftUI identity and rendering, not just property wrappers
-- Security, offline, pagination, and “what breaks at 10× data”
-- Mentoring: can you explain the same idea at three altitudes?
-
-Read the 4+ tags, system design, senior scenarios, and the interviewer’s perspective. You will be asked “why not the other way?” more often than “what is this API?”
+Read the 4+ material, system design, the senior scenarios, and the interviewer’s chapter. If you cannot teach `@State` to a junior and then argue identity with a staff engineer, you are not finished.
 
 ### If you are an interviewer
 
-Use the experience tags as a scoring rubric, not a checklist. A strong 1-year candidate who reasons clearly about `@State` is more hireable than a 5-year candidate who recites TCA slogans. Each major concept includes:
-
-- What a junior must say
-- What a mid-level must add
-- What a senior must add
-- Follow-up questions that reveal depth
+Use the experience bands as a scoring rubric, not a checklist. A strong one-year candidate who reasons clearly about `@State` is more hireable than a five-year candidate who recites TCA slogans. For each major idea, listen for what a junior must get right, what a mid-level must add, and what a senior must add. The follow-ups in this book exist to reveal whether the first answer was a sentence or a model.
 
 ### How to convert this Markdown later
 
-This file is written with:
+Headings are ATX (`#`, `##`, `###`). Code is fenced Swift. Diagrams are ASCII. Comparisons and cheat sheets are tables.
 
-- ATX headings (`#`, `##`, `###`)
-- Fenced Swift code
-- ASCII diagrams
-- Tables for comparisons and cheat sheets
-- Consistent metadata blocks for filtering
-
-Pandoc, GitHub, and most static-site generators can turn it into PDF or HTML. Keep heading levels stable if you split chapters later.
+Pandoc, GitHub, and most static-site generators will turn that into PDF or HTML. Keep heading levels stable if you split chapters later — the table of contents above is a map of those anchors.
 
 ---
 
@@ -201,46 +155,23 @@ Pandoc, GitHub, and most static-site generators can turn it into PDF or HTML. Ke
 
 ### Why these buckets exist
 
-Years of experience are a **proxy**, not a law. The buckets exist because interview loops are structured that way:
+Years of experience are a proxy, not a law. Loops are just structured that way. A 0–2 loop is short, so interviewers hunt for fundamentals. A 2–4 loop often adds a take-home or a feature-design round, so they hunt for data flow and testing. A 4+ loop adds system design and behavioural rounds, so they hunt for judgment when the spec is incomplete.
 
-- **0–2** loops are short. Interviewers need signal from fundamentals.
-- **2–4** loops add a take-home or a feature-design round. Interviewers need signal from data flow and testing.
-- **4+** loops add system design and behavioural rounds. Interviewers need signal from judgment under incomplete information.
+A topic is “0–2” when a competent junior is expected to use it correctly on the job. It becomes “2–4” when you must understand ownership, lifetime, or failure modes, not just syntax. It becomes “4+” when you must understand runtime or compiler behaviour, isolation, or system-level trade-offs.
 
-A concept is tagged **0–2** when a competent junior is expected to use it correctly on the job.  
-A concept is tagged **2–4** when you must understand **ownership, lifetime, or failure modes**, not just syntax.  
-A concept is tagged **4+** when you must understand **runtime/compiler behaviour, isolation, or system-level trade-offs**.
-
-Many concepts span levels. Example:
-
-```text
-@State
-Level: 0–2          → it stores view-owned value state; mutating it refreshes the view
-Advanced: 2–4       → storage lives outside the struct; identity controls lifetime
-Deep: 4+            → how invalidation, dependency tracking, and animation transactions interact
-```
+Most ideas span levels. `@State` is a good example. At 0–2 you should say it stores view-owned value state and that mutating it refreshes the view. At 2–4 you should add that the storage lives outside the struct and that identity controls the lifetime. At 4+ you should be able to talk about invalidation, dependency tracking, and animation transactions. Same keyword, three altitudes.
 
 ---
 
 ## Filtering System
 
-Every important concept uses the same metadata block:
+There is no search box in a Markdown file. Filter with intent.
 
-```text
-Experience: 0–2 | 2–4 | 4+
-Category: Swift | SwiftUI | UIKit | Concurrency | Networking | Persistence | Architecture | Testing | Security | Performance | System Design
-Difficulty: Beginner | Intermediate | Advanced | Expert
-Importance: Critical | High | Medium | Low
-```
+If you are preparing for a junior role, stay on the fundamentals until you can teach them. If you are preparing for a mid role, add Observation, cancellation, dependency injection, and tests. If you are preparing for senior or staff, add system design, performance, and the “why not the other way” chapters. If you are teaching, start at the beginner explanation, then walk the same idea at the next altitude.
 
-**How to filter while reading**
+Importance here means “how often this shows up in interviews and production bugs,” not “how hard it is.” `@State` is beginner and still the most important SwiftUI idea in the building. Associated types with type erasure are a senior-loop topic and a distraction for junior ones.
 
-- Preparing for a **junior** role: read `Experience: 0–2` and `Importance: Critical` or `High`.
-- Preparing for a **mid** role: add `Experience: 2–4`.
-- Preparing for a **senior/staff** role: add `Experience: 4+` and every **System Design** / **Performance** chapter.
-- Teaching a topic: start at Beginner, then use the “Junior vs experienced” subsections.
-
-**Importance** means “how often this appears in interviews and production bugs,” not “how hard it is.” `@State` is Beginner and **Critical**. Associated types with type erasure are Advanced and High for senior loops, Medium for junior loops.
+The coloured markers in the legend are a faster version of the same map. Use them when you are skimming the night before, not as a substitute for reading the failure modes.
 
 ---
 
@@ -255,19 +186,7 @@ Importance: Critical | High | Medium | Low
 | ❌ | Common mistake or interview trap |
 | legacy → modern | Evolution of an API you must still recognise |
 
-**Version policy used throughout**
-
-```text
-Legacy approach
-        ↓
-Modern approach
-        ↓
-Why Apple introduced the change
-        ↓
-What an interview candidate should know
-```
-
-This book never presents a deprecated API as the thing you should reach for first. It still teaches deprecated and legacy APIs because **real codebases and interviewers still use them**.
+This book never presents a deprecated API as the thing you should reach for first. It still teaches deprecated and legacy APIs because real codebases and interviewers still use them. The pattern is always the same: here is what people used to write, here is what you write now, here is why Apple changed it, here is what a candidate should still be able to recognise.
 
 | Status | Meaning | Example |
 | ------ | ------- | ------- |
@@ -280,37 +199,14 @@ This book never presents a deprecated API as the thing you should reach for firs
 
 ## A note on SwiftUI versus UIKit in interviews
 
-SwiftUI is the centre of this book because that is where new iOS UI work is going. UIKit remains mandatory interview knowledge because:
+SwiftUI is the centre of this book because that is where new iOS UI work is going. UIKit remains mandatory interview knowledge because most large apps are hybrid, because lifecycle questions are easy to ask with precision, and because collection views, cell reuse, and the responder chain still appear. Plenty of performance and memory bugs are UIKit-shaped even when the screen is SwiftUI — `UIViewRepresentable` is how they sneak in.
 
-- Most large apps are hybrid
-- UIKit lifecycle questions are easy for interviewers to ask with precision
-- Collection views, cell reuse, and responder chain still appear
-- Many performance and memory bugs are UIKit-shaped even inside SwiftUI (`UIViewRepresentable`)
-
-If a job description says “SwiftUI,” still revise UIKit lifecycle and Auto Layout. If it says “UIKit,” still revise SwiftUI state and identity — interviewers increasingly use both.
+If a job description says “SwiftUI,” still revise UIKit lifecycle and Auto Layout. If it says “UIKit,” still revise SwiftUI state and identity. Interviewers increasingly use both.
 
 ---
 
 ## How to read a concept page
 
-Every major keyword is taught in the same shape. Internalise this shape; it is also how you should answer in interviews.
+A good page, and a good spoken answer, has the same shape even when the headings differ. Start from a situation (“the view reset when I navigated back”). Name the mechanism. Say what you would write, and what you would not. Mention memory, threads, or identity if they matter. Then give the trap that sounds right in the first thirty seconds.
 
-```text
-What it is
-Why it exists
-Why we write it
-What happens if we don't write it
-When we should write it
-When we should avoid it
-Syntax breakdown
-Internal model
-Memory / threads / performance
-Mistakes and traps
-Examples (basic, real-world, interview)
-Junior vs mid vs senior expected answer
-Follow-up questions
-```
-
-If you can fill that template for `@State`, `actor`, `Task`, and `struct` vs `class`, you are already ahead of most candidates.
-
----
+If you can do that for `@State`, `actor`, `Task`, and `struct` versus `class`, you are already ahead of most candidates. The rest of the book is more situations, more mechanisms, and the questions people actually ask after your first sentence.

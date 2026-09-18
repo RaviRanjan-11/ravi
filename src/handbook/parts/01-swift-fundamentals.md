@@ -2,7 +2,7 @@
 
 Swift is the language of iOS interviews. UI frameworks change; the language questions do not. A candidate who can explain optionals, value semantics, ARC, and concurrency will survive a weak SwiftUI round. A candidate who only memorised property wrappers will not.
 
-This part starts at first principles. If you already know Swift, do not skip it. Read the **internal model**, **what happens if you don't**, and **interview traps**. That is where mid-level and senior candidates are separated.
+This part starts at first principles. If you already write Swift every day, still read it. The syntax will feel familiar. The parts that separate mid-level from senior are the internal models: what a binding actually freezes, why an array assignment is cheap until you mutate, and what goes wrong when absence is modelled as `-1` instead of `Optional`.
 
 ---
 
@@ -10,69 +10,19 @@ This part starts at first principles. If you already know Swift, do not skip it.
 
 ## `let` — Immutable Bindings
 
-```text
-Experience: 0–2
-Advanced understanding: 2–4
-Category: Swift
-Difficulty: Beginner
-Importance: Critical
-```
+Interviews ask this from day one, and they are not testing whether you know the keyword. They want to know whether you understand that `let` freezes a *name*, not necessarily an *object*.
 
-**Why this level:** Every junior must use `let` by default. A 2–4 year candidate must additionally explain that `let` freezes the *binding*, not necessarily the *object*, and how that interacts with classes, collections, and SwiftUI.
-
-### What it is
-
-`let` declares a **constant binding**. You name a value once. You cannot point that name at a different value later.
+`let` creates a constant binding. You point a name at a value once. You cannot later point that same name at a different value.
 
 ```swift
 let name = "Ravi"
 ```
 
-### Syntax breakdown
+That looks trivial, and it is, until you meet a class. Programs are easier to reason about when names do not change meaning halfway down a function. The compiler can also prove more: if a binding cannot be reassigned, some mutations are impossible, some data races are harder to create, and some copies can be elided. None of that is why you write `let` in an interview, though. You write it because it documents intent — “this name will not be retargeted” — and because defaulting to `var` everywhere looks inexperienced.
 
-```text
-let     → keyword: create an immutable binding
-name    → the name of the binding
-=       → assignment at declaration
-"Ravi"  → String literal, type inferred as String
-```
+Use `let` unless you have a concrete reason to reassign the name or to mutate a value type through it. The reason to switch to `var` is specific: `currentUser = nextUser`, or `user.age += 1` when `User` is a struct. “I might need to change it later” is not a reason.
 
-### Why it exists
-
-Programs are easier to reason about when names do not change meaning. The compiler can also prove more facts: if a binding cannot be reassigned, some mutations are impossible, some data races are harder to create, and some copies can be elided.
-
-### Why we write it
-
-- It documents intent: “this name will not be retargeted.”
-- It is the Swift default style. Interviewers notice `var` used everywhere.
-- For value types, immutability of the binding plus immutability of stored properties gives you a truly fixed value.
-
-### What happens if we don't write it (`var` instead)
-
-```swift
-var name = "Ravi"
-name = "Asha"   // allowed
-```
-
-The program still compiles. You lose:
-
-- A compiler error when you accidentally reassign
-- A signal to the next reader that the value is stable
-- In some cases, an extra hint to the optimiser
-
-Nothing “breaks” immediately. The cost is accidental mutation and weaker intent. In interviews, defaulting to `var` looks inexperienced.
-
-### When to write it
-
-Always, unless you have a concrete reason to reassign or mutate through that name.
-
-### When to avoid it
-
-When the binding must be retargeted (`currentUser = nextUser`) or when you must mutate a value-type property through that name (`user.age += 1` requires `var user` if `User` is a struct).
-
-### Internal model
-
-`let` is a **binding rule**, not a “freeze this object in RAM” rule.
+The trap is treating `let` as “freeze this object in RAM.” It is a binding rule.
 
 ```swift
 class User {
@@ -80,8 +30,8 @@ class User {
 }
 
 let user = User()
-user.age = 31      // ✅ allowed: the object is mutable
-user = User()      // ❌ not allowed: the binding cannot be retargeted
+user.age = 31      // allowed: the object is mutable
+user = User()      // not allowed: the binding cannot be retargeted
 ```
 
 ```text
@@ -96,7 +46,7 @@ Reassignment of `user` is forbidden.
 Mutation of the object `user` points to is allowed if the class permits it.
 ```
 
-For a struct, stored-property mutation is a mutation of the *value*, which requires a `var` binding:
+For a struct, stored-property mutation *is* mutation of the value. That requires a `var` binding:
 
 ```swift
 struct User {
@@ -104,19 +54,17 @@ struct User {
 }
 
 let user = User(age: 30)
-user.age = 31   // ❌ cannot mutate a let value-type
+user.age = 31   // cannot mutate a let value-type
 ```
 
-### Copying and `let`
+Collections follow the same rule, with copy-on-write underneath. Arrays are structs. A `let` array cannot be mutated through that binding. Another `var` copy can mutate independently after a unique buffer is made.
 
 ```swift
 let numbers = [1, 2, 3]
-// numbers.append(4)  // ❌
+// numbers.append(4)  // not allowed
 ```
 
-Arrays are structs with copy-on-write. A `let` array cannot be mutated through that binding. Another `var` copy can mutate independently after a unique copy is made.
-
-### SwiftUI relevance
+In SwiftUI, `let` is how a view receives data it does not own:
 
 ```swift
 struct ProfileView: View {
@@ -125,90 +73,42 @@ struct ProfileView: View {
 }
 ```
 
-Use `let` for data the view **does not own and will not mutate**. Use `@State` (or another state wrapper) for data the view owns. Putting view-owned mutable data in `let` either will not compile (if you try to mutate) or will not persist (if you use a plain `var` without a wrapper — see State Management).
+Use `let` for data the view will not mutate. Use `@State` (or another state wrapper) for data the view owns. A plain `var` on a `View` without a wrapper is not persistent state — the struct is recreated constantly, so that `var` resets. Trying to mutate a `let` will not compile. The full picture lives in State Management; the language rule here is simply: inputs are `let`, owned mutable state is a wrapper.
 
-### Performance and memory
+`let` versus `var` is not a meaningful allocation difference by itself. The win is intent and, for value types, avoiding accidental copies caused by mutation. Copy-on-write collections stay shared until mutated; a `let` binding cannot be the source of that mutation.
 
-`let` vs `var` is not a meaningful allocation difference by itself. The win is intent and, for value types, avoiding accidental copies caused by mutation. Copy-on-write collections stay shared until mutated; a `let` binding cannot be the source of that mutation.
+On threads: a `let` of an immutable value type that contains only immutable stored properties is safe to share (and is typically `Sendable`). A `let` of a class instance is **not** automatically thread-safe. The reference is fixed; the object may still have races.
 
-### Thread-safety
+The usual mistakes are using `var` for every property “just in case,” believing `let` makes a class instance immutable, and telling an interviewer that `let` is a performance optimisation. Start with `let`. Switch when mutation is required. Know that a frozen reference is not a frozen object.
 
-`let` of an immutable value type that contains only immutable stored properties is safe to share across threads (and is typically `Sendable`). `let` of a class instance is **not** automatically thread-safe. The reference is fixed; the object may still have races.
+### Why prefer `let` over `var`?
 
-### Common mistakes
+Default to immutability so the compiler catches accidental reassignment and the next reader can trust that the name is stable. I would never lead with “`let` is faster.” Allocation is not the point. The point is a smaller set of possible program states, and a compile error instead of a silent change.
 
-```text
-❌ Using var for every property “just in case”
-✅ Start with let; switch to var when mutation is required
+The follow-up is almost always whether `let` makes a class immutable. It does not. `let user = User()` freezes the reference; `user.age = 31` is still legal if `age` is a `var` on the class. For a struct, the same mutation is illegal, because changing a stored property replaces the value, and a `let` value cannot be replaced.
 
-❌ Believing let makes a class instance immutable
-✅ let freezes the reference; class properties can still change
+### Can you mutate properties of a class stored in a `let` constant?
 
-❌ let vs var as a performance optimisation story
-✅ It is primarily a correctness and intent tool
-```
+Yes, if those properties are `var`. You cannot assign a new instance to the constant. Think of `let` as locking the arrow, not the box the arrow points at. Two names can still alias the same object, and mutations through either name are visible to the other.
 
-### Interview questions
-
-**Q: Why prefer `let` over `var`?**  
-**Expected:** Default to immutability so the compiler catches accidental reassignment and the code documents stability.  
-**Common wrong answer:** “`let` is faster.”  
-**Follow-up:** “Does `let` make a class immutable?”  
-**What they are testing:** Whether you distinguish binding immutability from object immutability.
-
-**Q: Can you mutate properties of a class stored in a `let` constant?**  
-**Expected:** Yes, if those properties are `var`. You cannot assign a new instance to the constant.  
-**Follow-up:** “What about a struct?”
-
-### One-minute explanation
-
-“`let` creates an immutable binding. I cannot point that name at a new value. For structs that also means I cannot mutate stored properties through that name. For classes, the object can still change; only the reference is fixed. I use `let` unless I have a reason to mutate or reassign.”
+A struct is the opposite story. There is no independent object sitting on the heap with its own identity. Mutating `user.age` *is* mutating `user`, so the binding has to be `var`. If the interviewer then asks about an array of structs held in a `let`, the array cannot be mutated through that name either — `Array` is itself a struct.
 
 ---
 
 ## `var` — Mutable Bindings
 
-```text
-Experience: 0–2
-Category: Swift
-Difficulty: Beginner
-Importance: Critical
-```
-
-### What it is
-
-`var` declares a **mutable binding**. You may reassign it, and if it holds a value type you may mutate that value in place.
+`var` is the other half of the same idea: a name you are allowed to retarget, and — if it holds a value type — a value you are allowed to mutate in place.
 
 ```swift
 var count = 0
 count += 1
 ```
 
-### Syntax breakdown
+State changes. Counters, flags, accumulators, and draft text are mutable. That is why `var` exists. It is not the default style. Every extra mutable binding increases the set of possible program states, which is exactly why Swift pushes you toward `let` and makes the compiler complain when you try to assign through a constant.
 
-```text
-var      → mutable binding
-count    → name
-= 0      → initial value, inferred as Int
-```
+If you need mutation and you wrote `let`, you get a compile-time error: `Cannot assign to value: 'count' is a 'let' constant`. That error is a feature. Write `var` when reassignment or in-place mutation of a value type is part of the design. Leave the name as `let` when it should be stable.
 
-### Why it exists
-
-State changes. Counters, flags, accumulators, and draft text are mutable.
-
-### What happens if we don't write it
-
-If you need mutation and used `let`, you get a compile-time error: `Cannot assign to value: 'count' is a 'let' constant`. That error is a feature.
-
-### When to write it
-
-When reassignment or in-place mutation of a value type is part of the design.
-
-### When to avoid it
-
-When the name should be stable. Mutable bindings increase the set of possible program states.
-
-### Mutating methods and `var`
+Mutating methods make the rule visible:
 
 ```swift
 struct Counter {
@@ -219,37 +119,23 @@ struct Counter {
 }
 
 var c = Counter()
-c.bump()          // ✅
+c.bump()          // allowed
 
 let frozen = Counter()
-frozen.bump()     // ❌ mutating method requires var
+frozen.bump()     // mutating method requires var
 ```
 
-`mutating` exists because mutating a struct is semantically replacing the whole value. That is only legal if the binding is `var`.
+`mutating` exists because mutating a struct is semantically replacing the whole value. That is only legal if the binding is `var`. A class method that changes a property does not need `mutating`; the object is already shared mutable state.
 
-### Common mistakes
+The two mistakes that show up in reviews: marking everything `var` and then never mutating it, and putting `var` on a protocol property that should be get-only. Use `{ get }` unless mutation is in the contract.
 
-```text
-❌ var everything, then never mutate
-✅ let by default
-
-❌ var on a protocol property that should be get-only
-✅ Use { get } unless mutation is in the contract
-```
-
-### Interview trap
-
-“If I use `var`, Swift copies more.” Not automatically. Copies of value types happen on assignment and on mutation of COW containers when the buffer is shared. `var` only *allows* mutation.
+A related interview line is “if I use `var`, Swift copies more.” Not automatically. Copies of value types happen on assignment, and on mutation of copy-on-write containers when the buffer is shared. `var` only *allows* mutation. It does not, by itself, copy anything.
 
 ---
 
 ## Constants vs Variables (the interview version)
 
-```text
-Experience: 0–2
-Advanced understanding: 2–4
-Importance: Critical
-```
+This is the same distinction, compressed into the table interviewers are mentally scoring you against.
 
 | | `let` | `var` |
 | --- | --- | --- |
@@ -259,53 +145,22 @@ Importance: Critical
 | Signal to reader | Stable | May change |
 | SwiftUI inputs | Prefer `let` | Only if the view mutates without a wrapper (rare/wrong) |
 
-**Junior must know:** prefer `let`.  
-**Mid must know:** `let` + class is not immutable state; SwiftUI `let` properties are inputs, not `@State`.  
-**Senior must know:** immutability is a concurrency and `Sendable` strategy, not a style fetish.
+A junior must prefer `let`. A mid-level candidate must also know that `let` plus a class is not immutable state, and that SwiftUI `let` properties are inputs, not `@State`. A senior treats immutability as a concurrency and `Sendable` strategy, not a style fetish: an immutable value with immutable contents is something you can hand across isolation domains without a lock.
 
 ---
 
 ## Type Inference and Type Annotations
 
-```text
-Experience: 0–2
-Category: Swift
-Difficulty: Beginner
-Importance: High
-```
-
-### What they are
-
-The compiler can **infer** a type from context. You can also **annotate** the type explicitly.
+Swift is statically typed. Every binding has a type at compile time. Inference is a convenience so you do not repeat the obvious. It is **not** dynamic typing. The type is still fixed; the compiler just filled it in from context.
 
 ```swift
 let name = "Ravi"           // inferred: String
 let name: String = "Ravi"   // annotated
 ```
 
-### Syntax breakdown
+The colon binds a type to the name: `let name: String = "Ravi"`. You still write annotations where inference cannot see enough, or where the reader cannot. Function signatures — parameters and return types — require them. Empty collections are ambiguous (`[]` could be anything). Existentials need a name (`let error: any Error`). Public API is clearer with an explicit type. And sometimes inference picks `Double` versus `CGFloat` versus `Int` in a way that will not compile against the API you actually called.
 
-```text
-let name: String = "Ravi"
-          ↑
-          type annotation — the colon binds a type to the name
-```
-
-### Why inference exists
-
-Swift is statically typed. Every binding has a type at compile time. Inference is a convenience so you do not repeat the obvious. It is **not** dynamic typing. The type is still fixed.
-
-### Why we still write annotations
-
-- Function signatures (parameters and return types) — required
-- Empty collections (`[]` is ambiguous)
-- Protocols / existentials (`let error: Error`)
-- When inference picks `Double` vs `CGFloat` vs `Int` incorrectly
-- Public API clarity
-
-### What happens if we don't annotate
-
-Usually nothing — inference succeeds. When it fails:
+When inference succeeds, omitting the annotation costs nothing. When it fails, you get a compile error rather than a runtime surprise:
 
 ```swift
 let items = []
@@ -316,56 +171,38 @@ let items = []
 let items: [String] = []
 ```
 
-### When inference is dangerous in interviews
+Literal inference is a favourite gotcha. `1` is `Int`, not `Double`. `1.0` is `Double`. `1 + 1.0` becomes `Double` via overload. Mixing `CGFloat` and `Double` used to be painful; on modern Apple platforms they are often interchangeable, but they are not the same type in every Swift context, and you should not claim they are.
 
-```swift
-let x = 1        // Int, not Double
-let y = 1.0      // Double
-let z = 1 + 1.0  // Double (via overload)
-```
-
-Mixing `CGFloat` and `Double` used to be painful. In modern Swift they are often interchangeable on Apple platforms, but **do not claim they are the same type in every Swift context**.
-
-### `any` and `some` are not “inference”
+`some` and `any` are not inference. They are type-level features:
 
 ```swift
 let view: some View = Text("Hi")   // opaque type
 let erased: any View = Text("Hi")  // existential
 ```
 
-These are type-level features. See [some vs any](#some-view-vs-any-view).
+The compiler still knows an exact type for `some View` (you just cannot name it at the call site). `any View` is a box that can hold different concrete types. See [some vs any](#some-vs-any).
 
-### Interview question
+### Is Swift strongly typed if it infers types?
 
-**Q: Is Swift strongly typed if it infers types?**  
-**Expected:** Yes. Inference fills in static types. Runtime values are not free to change type.  
-**Wrong:** “Swift is like Python because it infers.”
+Yes. Inference fills in static types. A value’s type is decided at compile time and does not change at runtime. Saying “Swift is like Python because it infers” confuses a convenience of the type checker with dynamic typing. Python names can point at an `int` and later a `str`. A Swift `let name = "Ravi"` is a `String` forever; the compiler already committed to that.
+
+The places you still annotate are the places the compiler cannot see, or the places a human should not have to guess: empty collections, public function signatures, and existentials.
 
 ---
 
 ## Basic Data Types
 
-```text
-Experience: 0–2
-Category: Swift
-Difficulty: Beginner
-Importance: High
-```
+Swift’s core scalars are value types — structs, with `Optional` as the important enum. Treat them as values: assignment copies, mutation needs `var`, and there is no hidden identity.
 
-Swift’s core value types are structs (or enums, for `Optional` and `Bool` historically as a struct-like value). Treat them as **values**.
+### Integers
 
-### `Int`
-
-Whole numbers. Size is platform-dependent (`Int` is the word size: 64-bit on modern iPhones).
+`Int` is a whole number whose size is the platform word — 64-bit on modern iPhones. You use it for indexing, counts, and integer IDs. You do not use it for money (`Decimal`), for the bytes of a file protocol (`UInt8` / `Data`), or as an escape hatch for numbers that do not fit (`Double` is the wrong next step; use a dedicated type).
 
 ```swift
 let score: Int = 10
 ```
 
-Why it exists: indexing, counts, IDs that are integers.  
-When not to use: money (use `Decimal`), bits of a file protocol (use `UInt8` / `Data`), very large integers (`Double` is the wrong escape hatch; consider a dedicated type).
-
-**Trap:** `Int` overflow traps in debug (and by default in Swift, overflow is a runtime error unless you use overflowing operators `&+`).
+Overflow traps in typical builds. That is a runtime error, not wraparound, unless you opt into overflowing operators:
 
 ```swift
 let a = Int.max
@@ -373,82 +210,65 @@ let a = Int.max
 let b = a &+ 1    // wraps
 ```
 
-**Interview:** “What’s the difference between `Int` and `Int64`?” On 64-bit, they are the same width, but `Int` is the idiomatic index type. Use fixed-width types when the width is part of a file format or network protocol.
+On 64-bit, `Int` and `Int64` are the same width, but `Int` is the idiomatic index type. Use a fixed-width type when the width is part of a file format or network protocol, not because it “feels more precise.”
 
-### `Double` and `Float`
+### Floating point
 
 ```swift
 let pi = 3.14159          // Double by default
 let f: Float = 3.14159
 ```
 
-`Double` is 64-bit IEEE-754. `Float` is 32-bit. Prefer `Double` unless an API demands `Float` (some older graphics APIs).
-
-**Never use binary floating point for currency.**
+`Double` is 64-bit IEEE-754. `Float` is 32-bit. Prefer `Double` unless an API demands `Float` (some older graphics APIs still do). Never use binary floating point for currency.
 
 ```swift
 let total = 0.1 + 0.2
 // not exactly 0.3
 ```
 
-Use `Decimal` for money.
+Use `Decimal` for money. Construct it from a string or from an integer number of cents — not from a `Double` you already rounded wrong.
 
-### `Bool`
+### Booleans
 
 ```swift
 let isLoggedIn = false
 ```
 
-Only `true` and `false`. No truthy integers.
+Only `true` and `false`. There are no truthy integers. `if count` does not compile; you write `if count != 0`. The same rule bites people with `Bool?`: `if optionalBool` does not compile, because an optional is not a Boolean. Absence is not `false`.
 
-**Trap:** `if optionalBool` does not compile. Optionals are not Booleans.
-
-### `String` and `Character`
+### Strings and characters
 
 ```swift
 let name = "Ravi"
 let first: Character = "R"
 ```
 
-`String` is a collection of `Character` (extended grapheme clusters), not UTF-16 code units. Counting and indexing are **not O(1)** in the way C `char*` indexing is.
+`String` is a collection of `Character` values, and a `Character` is an extended grapheme cluster, not a UTF-16 code unit. Counting and indexing are **not** O(1) the way C `char*` indexing is.
 
 ```swift
 let flag = "🇮🇳"
-flag.count              // 1 Character (one grapheme cluster, conceptually a flag)
+flag.count              // 1 Character (one grapheme cluster)
 Array(flag.utf8).count  // more than 1
 ```
 
-```text
-Why this level spans 0–2 and 2–4:
-Junior: String is text; use interpolation; know Character vs String.
-Mid: indexing is String.Index; avoid String.Index arithmetic in hot loops;
-     know unicode equality vs canonical equivalence at a high level.
-```
+A junior needs interpolation, `Character` versus `String`, and the fact that `String` is a value type with copy-on-write. A mid-level candidate needs `String.Index`, should not do index arithmetic in a hot loop, and should know that Unicode equality is not “same bytes.”
 
-**Syntax: interpolation**
+Interpolation is the usual way to build text:
 
 ```swift
 let greeting = "Hello, \(name)"
 ```
 
-```text
-\(name) → interpolates a value into a String
-```
+Prefer it over `+` for readability. `+` creates new strings; in a loop, prefer `map`/`joined` or building the string in one shot. `String` is still copy-on-write, so the real bug is accidental quadratic concatenation in a naive loop, not “strings are slow.”
 
-**Why not `+` for everything?** Interpolation is clearer. `+` on strings creates new strings; in a loop, prefer `map`/`joined` or building via interpolation in one shot. For huge builders, `String` is still copy-on-write; the real issue is accidental quadratic concatenation in a naive loop.
-
-**Mutating strings**
+Mutation requires `var`:
 
 ```swift
 var s = "Hello"
 s.append("!")
 ```
 
-Requires `var`. `String` is a struct with COW.
-
-**When not to use `String` for identity:** if the value is an ID, consider a dedicated `struct UserID: Hashable`. Strings as IDs compile but invite mixing `"user"` and `"email"`.
-
-### Type summary table
+If the value is an identifier, consider a dedicated `struct UserID: Hashable` instead of `String`. Strings as IDs compile, and then someone passes an email to an API that wanted a user id.
 
 | Type | Kind | Default literal | Interview note |
 | ---- | ---- | --------------- | -------------- |
@@ -456,7 +276,7 @@ Requires `var`. `String` is a struct with COW.
 | `Double` | struct | `3.14` | Default floating literal |
 | `Float` | struct | needs annotation | Prefer `Double` |
 | `Bool` | struct | `true`/`false` | Not optional |
-| `String` | struct | `"text"` | Unicode, COW |
+| `String` | struct | `"text"` | Unicode, copy-on-write |
 | `Character` | struct | `"A"` as Character | Grapheme cluster |
 | `Decimal` | struct | via `Decimal(string:)` | Money |
 
@@ -464,55 +284,25 @@ Requires `var`. `String` is a struct with COW.
 
 ## Collections: Array
 
-```text
-Experience: 0–2
-Advanced understanding: 2–4
-Category: Swift
-Difficulty: Beginner
-Importance: Critical
-```
-
-### What it is
-
-An ordered collection of values of the same type. `Array` is a **struct** with **copy-on-write**.
+An `Array` is an ordered collection of values of the same type. It is a **struct** with **copy-on-write**. That combination is the whole interview: semantically a value, physically a shared buffer until someone mutates.
 
 ```swift
 var names = ["Ravi", "Asha"]
 names.append("Dev")
 ```
 
-### Syntax breakdown
-
-```text
-var names = ["Ravi", "Asha"]
-var          → mutable binding (needed to append)
-names        → binding
-=            → assignment
-["Ravi", …]  → array literal, inferred [String]
-```
-
-Empty array:
+The binding has to be `var` to append. The literal `["Ravi", "Asha"]` infers `[String]`. Empty arrays need a type because `[]` is ambiguous:
 
 ```swift
 let empty: [String] = []
 let also = [String]()
 ```
 
-### Why it exists
+You reach for `Array` when order matters: rows on a screen, decoded JSON arrays, a queue of work. Random access by `Int` index is O(1). Iteration preserves order. `Codable` support is excellent.
 
-Ordered lists: screens of rows, decoded JSON arrays, queued work.
+You do not use it as a uniqueness filter on large data — that is `Set`, average O(1) `contains`. You do not use it as a key/value map — that is `Dictionary`. And you do not call `Array.contains` in a hot loop on a large unordered unique collection; that is linear.
 
-### Why we use it
-
-O(1) random access by `Int` index. Iteration preserves order. Codable support is excellent.
-
-### When not to use it
-
-- Unique membership tests on large data → `Set` (O(1) average)
-- Key/value lookup → `Dictionary`
-- Huge ordered unique sets with log operations → maybe a sorted structure, not a linear `Array.contains` in a hot loop
-
-### Internal model (copy-on-write)
+Copy-on-write is why passing arrays into functions is cheap:
 
 ```text
 var a = [1, 2, 3]
@@ -531,9 +321,9 @@ After b.append(4):
   b ──► [1, 2, 3, 4]
 ```
 
-**What happens if we don't use COW (mental model)?** If every assignment deep-copied, passing arrays into functions would be expensive. COW makes “value semantics” cheap until mutation.
+If every assignment deep-copied, “value semantics” would be too expensive to use. Copy-on-write keeps the semantics and delays the cost until mutation. A `let` array can share its buffer forever, because nothing can mutate through that name.
 
-### Common operations
+The everyday operations are the ones you should be able to write without looking them up:
 
 ```swift
 names[0]
@@ -547,15 +337,13 @@ names.filter { $0.hasPrefix("A") }
 names.reduce(0) { $0 + $1.count }
 ```
 
-### Bounds
+Out-of-range subscripts trap:
 
 ```swift
 let x = names[10]  // trap / crash if out of range
 ```
 
-Prefer `names[safe:]` only if you wrote it; Swift has no built-in safe subscript. Use `indices.contains` or `first`/`last`.
-
-### Performance
+Swift has no built-in safe subscript. Do not invent `names[safe:]` in an interview unless you say you would write it. Use `indices.contains`, or `first` / `last`.
 
 | Operation | Typical cost |
 | --------- | ------------ |
@@ -565,131 +353,69 @@ Prefer `names[safe:]` only if you wrote it; Swift has no built-in safe subscript
 | `contains` (no Hashable set) | O(n) |
 | `map` | O(n) |
 
-### Thread-safety
+`Array` is not thread-safe. Concurrent mutation of a shared array is undefined. Share **immutable** arrays (`let`) freely if the elements are `Sendable`. Mutate on one actor or on a serial queue.
 
-`Array` is not thread-safe. Concurrent mutation of a shared array is undefined. Share **immutable** arrays (`let`) freely if elements are `Sendable`. Mutate on one actor or serial queue.
+### Are arrays passed by value?
 
-### Interview questions
+Semantically yes — `Array` is a struct, so assignment and argument passing copy the value. Physically, copy-on-write shares the buffer until mutation, so the copy is cheap until someone writes. Arrays are not classes, and they are not “always a full copy.” Both of those answers fail the question.
 
-**Q: Are arrays passed by value?**  
-**Expected:** Semantically yes (value type). Physically, COW shares storage until mutation.  
-**Wrong:** “Arrays are classes” or “always a full copy.”
-
-**Q: Why is `insert(at: 0)` slow?**  
-**Expected:** Elements must shift. Use `Deque` (swift-collections) or reverse the model if you always insert at front.
+If someone then asks why `insert(at: 0)` is slow: every element after the insertion point has to shift. If you always insert at the front, the model is wrong for `Array`. `Deque` from swift-collections, or reversing the representation, is the usual way out.
 
 ---
 
 ## Collections: Set
 
-```text
-Experience: 0–2
-Advanced understanding: 2–4
-Category: Swift
-Difficulty: Beginner
-Importance: High
-```
-
-### What it is
-
-An unordered collection of **unique** `Hashable` values.
+A `Set` is an unordered collection of **unique** `Hashable` values. Inserting a value that is already present is a no-op for membership.
 
 ```swift
 var tags: Set<String> = ["swift", "ios"]
-tags.insert("swift")  // no-op uniqueness
+tags.insert("swift")  // still one "swift"
 ```
 
-### Why it exists
+You want a set for membership, uniqueness, and set algebra — `union`, `intersection`, `subtracting`. Deduplicating IDs, “is this permission granted?”, and a fast `contains` are the everyday uses. You do not want a set when order matters (unless you also keep an array). You cannot put a value in a set if it is not `Hashable`.
 
-Membership, uniqueness, set algebra (`union`, `intersection`, `subtracting`).
+The alternative is `Array`, and it is the wrong default for uniqueness. `array.contains` is O(n). Duplicates sneak in. Interviewers love: “the API returns duplicate posts — how do you unique them?” `Set` is the first correct answer. If you also need stable order, keep an `Array` and a `Set` of things already seen.
 
-### When to use
-
-Deduplicating IDs, “is this permission granted?”, fast `contains`.
-
-### When not to use
-
-When order matters (unless you also keep an array). When values are not `Hashable`.
-
-### What happens if we use Array instead
-
-`array.contains` is O(n). Duplicates sneak in. Interviewers love: “the API returns duplicate posts — how do you unique them?” `Set` is the first correct answer; stable order needs `Array` + `Set` seen-tracker.
-
-### Hashable contract
-
-If you implement `Hashable` incorrectly (hash depends on a mutable field you then change while the value is in a set), the set breaks. Prefer synthesised `Hashable` on structs of `Hashable` properties.
+The `Hashable` contract is the mid-level follow-up. If you implement `Hashable` so the hash depends on a mutable field, and then you change that field while the value is in a set, the set breaks — lookups miss, uniqueness fails. Prefer synthesised `Hashable` on structs of `Hashable` properties, and do not mutate a value’s identity-relevant fields after insertion.
 
 ---
 
 ## Collections: Dictionary
 
-```text
-Experience: 0–2
-Advanced understanding: 2–4
-Category: Swift
-Difficulty: Beginner
-Importance: Critical
-```
-
-### What it is
-
-A hash map from `Hashable` keys to values.
+A `Dictionary` is a hash map from `Hashable` keys to values. The subscript returns an optional because a missing key is normal, not exceptional.
 
 ```swift
 var ages = ["Ravi": 31, "Asha": 28]
 ages["Dev"] = 40
-let ravi = ages["Ravi"]   // Int?  ← optional
+let ravi = ages["Ravi"]   // Int?
 ```
 
-### Syntax breakdown
-
-```text
-ages["Ravi"]  → subscript returns Optional because the key may be missing
-```
-
-### Why the subscript is optional
-
-Missing keys are normal. Force-unwrapping dictionary lookups is a classic crash.
+Force-unwrapping dictionary lookups is a classic crash. Missing keys happen. Handle them:
 
 ```swift
 let age = ages["Ravi"] ?? 0
 if let age = ages["Ravi"] { ... }
 ```
 
-### Why it exists
+Dictionaries exist for indexed lookup by identity (user ID → user), grouping, caches, and JSON objects. They are the wrong tool for a tiny closed mapping that is really an enum. They are also the wrong tool if order is a business rule. Current Swift iterates dictionaries in insertion order, but that is not something to build product behaviour on unless you have documented it. If order matters, store an array of keys (or an array of pairs) and say so.
 
-Indexed lookup by identity (user ID → user), grouping, caches, JSON objects.
-
-### When not to use
-
-Tiny fixed mappings that are really an enum. Ordered mappings (Dictionary order is the order of insertion in current Swift, but **do not depend on it for business rules** unless you have a documented need; if order is a requirement, make it explicit with an array of keys).
-
-### `default:` subscript
+The `default:` subscript is the counting idiom:
 
 ```swift
 ages["Sam", default: 0] += 1
 ```
 
-Creates the key if missing. Excellent for counting.
+It creates the key if missing, then lets you mutate the value in place. Excellent for histograms; easy to overuse as a way to hide missing-data bugs.
 
-### Nested dictionaries and JSON
+Decoded JSON objects become `[String: Any]` only if you skip `Codable`. Prefer `Codable` models. `[String: Any]` is an interview smell unless you are writing a generic JSON explorer.
 
-Decoded JSON objects become `[String: Any]` only if you skip Codable. Prefer `Codable` models. `[String: Any]` is an interview smell unless you are writing a generic JSON explorer.
-
-### Thread-safety
-
-Same as Array: not thread-safe. A cache dictionary needs a lock, actor, or concurrent queue with barrier writes.
+Thread-safety is the same as `Array`: not thread-safe. A cache dictionary needs a lock, an actor, or a concurrent queue with barrier writes. Sharing a `let` dictionary of `Sendable` values is the cheap safe path.
 
 ---
 
 ## Tuples
 
-```text
-Experience: 0–2
-Category: Swift
-Difficulty: Beginner
-Importance: Medium
-```
+A tuple is a lightweight grouping: a few values that travel together for a moment, often as multiple return values.
 
 ```swift
 let pair = (name: "Ravi", age: 31)
@@ -697,37 +423,21 @@ pair.name
 let (name, age) = pair
 ```
 
-### Why they exist
+Labels at the call site help. That still does not make a tuple a type you want in a public API. Tuples cannot conform to protocols in the way a `struct` can (the compiler has limited magic; you should not rely on it), they are awkward to reuse, and they make `Codable` painful.
 
-Lightweight grouping: multiple return values, temporary pairs.
-
-### When not to use
-
-When the grouping has meaning over time. Then you want a `struct`. Tuples cannot conform to protocols (except in limited compiler-magic ways), cannot be easily reused in APIs, and make Codable painful.
-
-### Interview trap
-
-Returning `(String, String)` for `(first, last)` — argument labels help, but a `struct Name` is clearer.
+Returning `(String, String)` for first and last name is the usual trap. Argument labels help:
 
 ```swift
 func splitName(_ full: String) -> (first: String, last: String)
 ```
 
-Fine for internal helpers. Public API: prefer a type.
+Fine for an internal helper. If the grouping has meaning over time, write a `struct Name`. The moment you pass that pair through three layers, you wanted a type.
 
 ---
 
 # Optionals
 
-```text
-Experience: 0–2
-Advanced understanding: 2–4
-Category: Swift
-Difficulty: Beginner
-Importance: Critical
-```
-
-**Why this is Critical:** Optionals are the most common junior crash source and the most common “explain this” language question.
+Optionals are the most common junior crash source and the most common “explain this” language question. Interviews ask them from day one.
 
 ## What an optional is
 
@@ -740,40 +450,16 @@ enum Optional<Wrapped> {
 }
 ```
 
-`Int?` is sugar for `Optional<Int>`.
+`Int?` is sugar for `Optional<Int>`. `nil` is `.none`. Assigning a wrapped value is `.some(...)` via implicit wrapping.
 
 ```swift
 var username: String? = nil
 username = "ravi"
 ```
 
-### Syntax breakdown
+Objective-C had pointers that could be `nil`, and implicit conversions that hid crashes. Swift makes absence **explicit in the type system** so you handle it at compile time. Dictionary lookup, failable initialisers (`Int("abc")`), a delegate that might not be set, a JSON field that may be missing, a search that may not find a row — those are optionals because absence is real.
 
-```text
-String?     → Optional<String>
-nil         → Optional.none
-"ravi"      → assigned as .some("ravi") via implicit wrapping
-```
-
-### Why it exists
-
-Objective-C had pointers that could be `nil` and also implicit conversions that hid crashes. Swift makes absence **explicit in the type system** so you handle it at compile time.
-
-### Why we use it
-
-- Dictionary lookup
-- Failable init (`Int("abc")`)
-- Delegate that might not be set
-- JSON fields that may be missing
-- Search that may not find a row
-
-### What happens if we don't use it
-
-You would need sentinel values (`""`, `-1`, `0`). Those collide with real data. Interviewers will ask: “Why not use `-1` for missing age?” Because `-1` is a valid integer and will leak into UI and analytics.
-
-### When not to use it
-
-Do not make everything optional “because it might fail.” If a `User` always has an `id` after login, use `String`, not `String?`. Optionality is part of the domain model.
+The alternative is sentinel values: `""`, `-1`, `0`. Those collide with real data. “Why not use `-1` for missing age?” Because `-1` is a valid integer and will leak into UI and analytics. Optionality is part of the domain model, which is also why you should not make everything optional “because it might fail.” If a `User` always has an `id` after login, that field is `String`, not `String?`. Illegal absence should be unrepresentable.
 
 ---
 
@@ -783,10 +469,10 @@ Do not make everything optional “because it might fail.” If a `User` always 
 
 ```swift
 var name: String = "Ravi"
-// name = nil  // ❌
+// name = nil  // not allowed
 ```
 
-`nil` is not a pointer. It is `.none`.
+`nil` is not a pointer and not a null object. It is `.none`. Comparing a non-optional to `nil` does not compile. Asking “is this pointer null?” is the Objective-C sentence; the Swift sentence is “does this optional hold a value?”
 
 ---
 
@@ -798,19 +484,11 @@ if let username {
 }
 ```
 
-Shorthand for `if let username = username` when names match.
+That is shorthand for `if let username = username` when the names match. Inside the block you have a `String`, guaranteed. The whole point is to convert `Wrapped?` into `Wrapped` in a scope where the compiler will not let it become `nil` again.
 
-### Why we write it
+If you skip binding, you keep carrying `String?` and either force-unwrap (crash) or sprinkle `?` until the compiler stops you from calling APIs that need `String`.
 
-To convert `Wrapped?` into `Wrapped` in a scope where it is guaranteed.
-
-### What happens if we don't
-
-You keep carrying `String?` and either force unwrap (crash) or sprinkle `?` until the compiler stops you from calling APIs that need `String`.
-
-### When to avoid `if let`
-
-When the rest of the function cannot proceed without the value — use `guard let` instead, to keep the happy path unindented.
+Avoid `if let` when the rest of the function cannot proceed without the value. That is `guard let`: early exit, happy path unindented.
 
 ---
 
@@ -825,19 +503,9 @@ func greet(_ name: String?) {
 }
 ```
 
-### Syntax breakdown
+`guard let name` unwraps or leaves. The comma is boolean AND in `guard`/`if`, so `!name.isEmpty` is an extra condition on the already-unwrapped value. The `else` must exit the scope — `return`, `throw`, `break`, `continue`, or `fatalError`. That is not pedantry; it is how the compiler knows the unwrapped `name` is safe for the rest of the function.
 
-```text
-guard let name    → unwrap or leave
-, !name.isEmpty   → extra condition (comma is boolean AND in guard/if)
-else { return }   → must exit the scope (return, throw, break, continue, or fatalError)
-```
-
-### Why it exists
-
-Early exit. The unwrapped value is in scope **after** the `guard`, for the rest of the function.
-
-### `if let` vs `guard let`
+That last part is the difference from `if let`. The unwrapped value lives **after** the `guard`, on the golden path, without extra indentation.
 
 | | `if let` | `guard let` |
 | --- | --- | --- |
@@ -845,7 +513,7 @@ Early exit. The unwrapped value is in scope **after** the `guard`, for the rest 
 | Typical use | Optional branch | Preconditions |
 | Indentation | Increases | Happy path stays left |
 
-**Interview expected sentence:** “`guard` enforces preconditions and keeps the golden path flat.”
+The sentence interviewers want: “`guard` enforces preconditions and keeps the golden path flat.”
 
 ---
 
@@ -855,21 +523,15 @@ Early exit. The unwrapped value is in scope **after** the `guard`, for the rest 
 let display = username ?? "Guest"
 ```
 
-```text
-??  → if left is .some, unwrap; else evaluate right
-```
-
-Right side is an **autoclosure**. It is only evaluated if needed.
+If the left side is `.some`, you get the wrapped value. If it is `.none`, the right side is evaluated. The right side is an **autoclosure**. It only runs if needed.
 
 ```swift
 let display = username ?? expensiveDefault()
 ```
 
-`expensiveDefault()` does not run if `username` is non-nil.
+`expensiveDefault()` does not run if `username` is non-nil. That is the same trick `assert` uses, and it is why `??` is not “just a ternary.”
 
-### When not to use `??`
-
-When the default hides a bug. `user.id ?? ""` can send empty IDs to analytics. Prefer failing explicitly if absence is illegal.
+Do not use `??` to hide a bug. `user.id ?? ""` can send empty IDs to analytics. If absence is illegal, fail explicitly — `guard let`, or throw, or `fatalError` with a message. Defaults are for genuine defaults, not for papering over a broken invariant.
 
 ---
 
@@ -879,27 +541,19 @@ When the default hides a bug. `user.id ?? ""` can send empty IDs to analytics. P
 let city = user?.address?.city
 ```
 
-If any step is `nil`, the whole expression is `nil`. The type becomes optional even if `city` was `String`.
+If any step is `nil`, the whole expression is `nil`. The type becomes optional even if `city` was a non-optional `String`. The same happens with properties that are not optional on the wrapped type:
 
 ```swift
 let count = names?.count   // Int?
 ```
 
-### Why we write it
-
-To probe a chain of optional relationships without nested `if let`.
-
-### What happens if we don't
-
-Nested unwraps, or force unwraps, or a crash.
-
-### Trap
+Chaining is how you probe a chain of optional relationships without nested `if let`. The cost is silence. This is a real bug:
 
 ```swift
 user?.logout()
 ```
 
-If `user` is `nil`, **nothing happens**. That can be a silent bug. Sometimes you wanted `guard let user else { return }` so a missing user is a real control-flow event.
+If `user` is `nil`, **nothing happens**. Sometimes that is what you wanted. Often you wanted `guard let user else { return }` so a missing user is a real control-flow event — a log, a throw, an early return — not a no-op that looks like success.
 
 ---
 
@@ -909,25 +563,11 @@ If `user` is `nil`, **nothing happens**. That can be a silent bug. Sometimes you
 let name = username!
 ```
 
-### Why it exists
+Force unwrap exists for the cases where you, the programmer, have a proof the compiler does not: immediately after a check the compiler cannot see, in tests, or with an implicitly unwrapped outlet that is about to be set by UIKit. If the value is `nil`, the process traps. In production that is a crash.
 
-When you, the programmer, have a proof the compiler does not: immediately after a check the compiler cannot see, or in tests, or in `@IBOutlet` (implicitly unwrapped — see below).
+Almost always, app code should use `guard let`, `if let`, or `??` instead. Acceptable uses are narrow: a local invariant you just established and cannot express in types; `Bundle.main.url(forResource:withExtension:)` for a file you ship in the app bundle (still can fail if the file is missing from the target); test code, where a crash is a test failure.
 
-### What happens when you use it wrongly
-
-If the value is `nil`, the process traps. In production that is a crash.
-
-### When to avoid it
-
-Almost always in app code. Prefer `guard let` / `if let` / `??`.
-
-### When it is acceptable
-
-- After a local invariant you just established and cannot express in types
-- `Bundle.main.url(forResource:withExtension:)` for a file you ship in the app bundle (still can fail if the file is missing from the target)
-- Test code where a crash is a test failure
-
-**Senior note:** A force unwrap is a **deliberate crash**. That can be better than continuing with corrupt state (fail loud). It is still usually the wrong tool versus `fatalError("message")` which documents why.
+A force unwrap is a **deliberate crash**. That can be better than continuing with corrupt state — fail loud. It is still usually the wrong tool versus `fatalError("missing bundled file X")`, which documents why you are willing to die here. “It should never be nil” is not a proof. If it should never be nil, the type should not be optional.
 
 ---
 
@@ -937,25 +577,17 @@ Almost always in app code. Prefer `guard let` / `if let` / `??`.
 var label: UILabel!
 ```
 
-This is `Optional<UILabel>` that unwraps automatically. It still can be `nil` and then crash on use.
+This is still `Optional<UILabel>`. It unwraps automatically when you use it, and it still crashes if it is `nil`. The sugar hides the `?`, not the absence.
 
-### Why it exists
+IUOs exist because of UIKit storyboards: outlets are `nil` until the view is loaded, then they are set. The type system cannot express “nil only before `viewDidLoad`” without an IUO or a regular optional you unwrap everywhere.
 
-UIKit storyboards: outlets are `nil` until the view is loaded, then they are set. The type system cannot express “nil only before `viewDidLoad`” without IUO or wrapping.
-
-### Modern SwiftUI
-
-You almost never need IUOs. Prefer regular optionals or non-optionals.
-
-### What happens if we use IUO as a shortcut for “I’ll set it later”
-
-You reinvent crashes. Use `let` with an initializer, or `lazy var`, or a proper optional.
+In SwiftUI you almost never need them. Prefer a regular optional or a non-optional that is set in an initialiser. Using `Type!` as a shortcut for “I’ll set it later” reinvents crashes. Use `let` with an initialiser, or `lazy var`, or a proper optional.
 
 ---
 
 ## Multiple examples
 
-### Example 1 — Basic
+### Parsing text that might not be a number
 
 ```swift
 func int(from text: String) -> Int? {
@@ -967,7 +599,9 @@ if let n = int(from: "42") {
 }
 ```
 
-### Example 2 — Real-world
+`Int.init` is failable. The return type is `Int?` because `"abc"` has no integer value. Binding is how you get an `Int` you can add to.
+
+### A field that is genuinely optional in an API
 
 ```swift
 struct APIUser: Decodable {
@@ -983,7 +617,9 @@ func displayName(for user: APIUser, first: String, last: String) -> String {
 }
 ```
 
-### Example 3 — Interview trap
+`id` is not optional: after decoding a user, you always have one. `middleName` is optional because the domain allows absence. Empty string and `nil` are both treated as “no middle name” here; that is a product decision, not a language one. Do not make `id` a `String?` “for safety.” That is the opposite of safety.
+
+### Zero is not `nil`
 
 ```swift
 var a: Int? = 0
@@ -993,63 +629,52 @@ if a != nil { print("a has a value") }  // prints, even though value is 0
 if b != nil { print("b has a value") }  // does not print
 ```
 
-`0` is not `nil`. Candidates who treat optionals like Booleans fail this.
+`0` is a value. Candidates who treat optionals like Booleans fail this. `if a` does not compile, which is Swift doing you a favour.
 
-Another trap:
+The IUO version of the same crash:
 
 ```swift
 let x: Int! = nil
 print(x + 1)  // crash
 ```
 
+The `!` in the type did not mean “this is never nil.” It meant “please crash on use if it is.”
+
 ---
 
 ## Optional map and flatMap
 
-```text
-Experience: 2–4
-Importance: High
-```
+This is the 2–4 year version of unwrapping: transform the wrapped value without an extra `if let` when the pipeline should stay optional.
 
 ```swift
 let text: String? = "42"
 let doubled = text.flatMap(Int.init).map { $0 * 2 }  // Int?
 ```
 
-Use these to transform without extra `if let` when the pipeline is still optional.
+`flatMap` on `Optional` takes `(Wrapped) -> U?` and flattens. `Int.init` returns `Int?`, so `map(Int.init)` would give `Int??`. `flatMap` collapses that. Then `map` doubles the `Int` if it is there. If `text` is `nil` or not a number, `doubled` is `nil`. Nothing crashed, and you did not nest bindings.
+
+Use this when the pipeline is still optional. Use `guard let` when you need a non-optional for the rest of a function.
 
 ---
 
 ## Common optional mistakes
 
-```text
-❌ Force unwrap because “it should never be nil”
-✅ If it should never be nil, use a non-optional type
+Force-unwrapping because “it should never be nil” is the crash factory. If it should never be nil, use a non-optional type. `if optional` does not compile for `Bool?`; `if optional == true` is valid but easy to misread — unwrap, or compare to `true` on purpose. Optional chaining that swallows errors (`user?.logout()`, `try?`) should be a `guard` plus throw, or a `Result`, when failure matters. And `String?` for “no text” is the wrong model if the domain already has empty string; use `""`, or an enum `{ empty, text(String) }` if empty and missing are different.
 
-❌ if optional == true   for Bool?
-✅ if optional == true is actually valid for Bool?, but prefer
-   `== true` consciously or unwrap; `if optional` does not compile
-
-❌ Optional chaining that swallows errors
-✅ guard + throw or return a Result
-
-❌ String? for "no text" when empty string is the domain
-✅ Use "" or an enum { empty, text(String) }
-```
+---
 
 ## Quick Revision — Optionals
 
-- `T?` is `Optional<T>`: `.none` or `.some(T)`
-- Unwrap with `if let`, `guard let`, `??`, `?`, rarely `!`
-- `nil` is not a pointer
-- Absence should be modelled; illegal absence should not be optional
+`T?` is `Optional<T>`: `.none` or `.some(T)`. Unwrap with `if let` and `guard let`, provide defaults with `??`, probe with `?`, and only force unwrap when a crash is the honest failure. `nil` is not a pointer. Absence should be modelled; illegal absence should not be optional.
+
+---
 
 ## Must Know
 
-`if let` vs `guard let` vs `??` vs `?` vs `!`
+The five unwrapping tools, and when each is honest: `if let` for a local branch, `guard let` for preconditions, `??` for a real default, `?` for a chain that may be absent, `!` for a deliberate crash. If you can explain those five in a minute, including the `0 != nil` trap and `guard` versus `if`, you will pass the optional round.
+
+---
 
 ## One-minute explanation
 
-“An optional is an enum that is either a value or nothing. Swift forces me to handle both. I unwrap with `guard`/`if let`, provide defaults with `??`, probe with `?`, and only force unwrap when a crash is the honest failure.”
-
----
+An optional is an enum that is either a value or nothing. Swift forces me to handle both. I unwrap with `guard` or `if let`, provide defaults with `??`, probe with `?`, and only force unwrap when a crash is the honest failure. I do not use sentinels, I do not make required fields optional, and I do not treat `nil` as a pointer.

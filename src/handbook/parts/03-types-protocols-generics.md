@@ -1,14 +1,6 @@
 # Structs, Classes, Enums, and Properties
 
-```text
-Experience: 0–2
-Advanced understanding: 2–4 / 4+
-Category: Swift
-Difficulty: Intermediate
-Importance: Critical
-```
-
-This chapter is the backbone of iOS interviews. If you only study one language chapter deeply, study this one.
+This chapter is the backbone of iOS interviews. If you only study one language chapter deeply, study this one. Value versus reference, exclusive states, and how SwiftUI views can be cheap structs because state lives elsewhere — that is the difference between “I write Swift” and “I can design a type.”
 
 ---
 
@@ -26,26 +18,13 @@ b.name = "Asha"
 // a.name is still "Ravi"
 ```
 
-### Syntax breakdown
+A struct is a named value. Assignment copies. `a` and `b` are independent after `b.name = "Asha"`. Stored properties that you intend to mutate need `var` on the property *and* a `var` instance; `let` freezes the whole value. If you do not write a custom `init`, Swift synthesises a memberwise one.
 
-```text
-struct User   → named value type
-var id        → stored property; mutation requires var instance
-```
+Structs exist so data can be independent copies. There is no shared mutable identity unless you introduce a class inside. That is the right default for models, view state, coordinates, parsed JSON — anything where “two variables, two values” is what you mean.
 
-Memberwise initializer is synthesised if you do not write a custom `init`.
+SwiftUI prefers structs for views because a view is a **description** of UI for a moment in time, not a long-lived object. The framework can recreate the struct cheaply and keep **state storage** elsewhere. See SwiftUI Rendering. `View.body` returns `some View` for the same reason: the concrete struct type stays known to the compiler, even if you cannot name it.
 
-### Why structs exist
-
-Independent copies. No shared mutable identity unless you introduce a class inside. Fits data: models, view state, coordinates, parsed JSON.
-
-### Why SwiftUI prefers structs for views
-
-A view is a **description** of UI for a moment in time, not a long-lived object. The framework can recreate the struct cheaply and keep **state storage** elsewhere. See SwiftUI Rendering.
-
-### Internal model
-
-Assignment copies. The copy is shallow at the Swift level; nested structs copy, nested classes copy the *reference*. Collections use COW.
+The copy is shallow at the Swift level. Nested structs copy. Nested classes copy the *reference*. Collections use copy-on-write, so a large `[User]` is cheap to assign until you mutate.
 
 ```text
 var a = User(...)
@@ -56,23 +35,11 @@ If User contains a class:
   (that is a common interview trap)
 ```
 
-### When to use struct
+That nested-class trap is how people “use structs” and still share mutable state. If `User` holds a `class AvatarCache`, two `User` values share the cache. The struct copy did not clone the object.
 
-- Models that are data
-- SwiftUI `View`
-- Small types (`CGPoint`-like)
-- Anything you want copied when assigned
+Use a struct for data, for SwiftUI `View`, for small types (`CGPoint`-like), and for anything you want copied when assigned. Skip it when identity matters (`===`), when you need inheritance (rare; prefer protocols), or when shared mutable state is the point — then a class or an actor. Do not assume “struct is always faster.” Very large mutation-heavy graphs without copy-on-write can copy more than a class would retain; measure.
 
-### When not to use struct
-
-- Identity matters (`===`)
-- You need inheritance (rare; prefer protocols)
-- Shared mutable state is the point (then class or actor)
-- Very large mutation-heavy graphs without COW — measure first; do not assume “struct is always faster”
-
-### What happens if we use class instead
-
-Shared mutation. Two screens holding the same `User` class will fight. That is sometimes what you want (`@Observable` model), often what you do not (decoded DTO).
+If you use a class instead, you get shared mutation. Two screens holding the same `User` class will fight. That is sometimes what you want (`@Observable` model). It is often what you do not want (a decoded DTO). Pick the semantics first, the keyword second.
 
 ---
 
@@ -96,31 +63,25 @@ a ──┐
 b ──┘
 ```
 
-### Why classes exist
+`let a` still allows `a.token = "y"` because `let` froze the reference, not the object. `b` is another name for the same instance. That is why classes exist: identity, shared mutable state, Objective-C interoperability, UIKit (`UIView` is a class), deinitialisers, inheritance.
 
-Identity, shared mutable state, Objective-C interoperability, UIKit (`UIView` is a class), deinitializers, inheritance.
-
-### `===` vs `==`
+Identity has its own operator:
 
 ```swift
 a === b   // same instance
 a == b    // Equatable value equality, if implemented
 ```
 
-Structs do not have `===`.
+Structs do not have `===`. If you find yourself wanting it on a struct, you wanted a class — or you wanted an `id` property and `==`.
 
-### Inheritance
+Swift classes are single-inheritance. Prefer protocols and composition. `final class` prevents subclassing: a slight performance win (devirtualisation) and a design statement that this type is not a hook for subclasses.
 
 ```swift
 class Animal { }
 class Dog: Animal { }
 ```
 
-Swift classes are single-inheritance. Prefer protocols + composition.
-
-`final class` prevents subclassing — slight performance win (devirtualisation) and a design statement.
-
-### `deinit`
+Only classes and actors have `deinit`:
 
 ```swift
 deinit {
@@ -128,18 +89,9 @@ deinit {
 }
 ```
 
-Only classes (and actors). Use for cleanup that is not ARC of other objects: cancelling a timer, removing an observer. Do not do heavy work or take locks carelessly. **Never assume `deinit` runs at a specific time on a specific thread** beyond “when last strong reference is gone” (and even then, autorelease pools and cycles delay it).
+Use it for cleanup that is not ARC of other objects: cancelling a timer, removing an observer. Do not do heavy work or take locks carelessly. Never assume `deinit` runs at a specific time on a specific thread beyond “when the last strong reference is gone” — and even then, autorelease pools and retain cycles delay it.
 
-### When to use class
-
-- UIKit / AppKit objects
-- `@Observable` models (macro applies to classes)
-- Shared services that have identity (a `URLSession` wrapper)
-- Objects with `deinit` lifecycle
-
-### When not to use class
-
-Default data models in SwiftUI. If two views should not share mutation, use a struct.
+Reach for a class for UIKit / AppKit objects, `@Observable` models (the macro applies to classes), shared services that have identity (a `URLSession` wrapper), and objects with a `deinit` lifecycle. Do not default data models to class “because Java.” If two views should not share mutation, use a struct. If they should share mutation under concurrency, consider an actor rather than a casually thread-safe class.
 
 ---
 
@@ -153,37 +105,21 @@ Default data models in SwiftUI. If two views should not share mutation, use a st
 | Inheritance | No | Yes |
 | `deinit` | No | Yes |
 | Thread-safety | Safer if immutable | Shared mutation races |
-| SwiftUI View | Required (`View` is a struct protocol use) | Views are structs |
+| SwiftUI View | Required (`View` is used as a struct) | Views are structs |
 | Default in Swift | Prefer struct | When identity/sharing is required |
-| Memory | Stack-ish / inline with COW heap buffers | Heap object + ARC |
+| Memory | Inline with COW heap buffers | Heap object + ARC |
 
-**Junior:** “struct is copy, class is shared.”  
-**Mid:** COW, nested class trap, SwiftUI state lifetime.  
-**Senior:** ARC vs copies in hot paths; Sendable; actors instead of thread-safe classes.
+A junior answer is “struct is copy, class is shared.” A mid-level answer adds copy-on-write, the nested-class trap, and SwiftUI state lifetime — the view struct dies and is recreated; `@State` / Observation storage does not. A senior answer talks about ARC retain/release versus copies in hot paths, `Sendable`, and actors instead of thread-safe classes.
 
-### Performance implications
+Lots of large non-COW structs passed through many layers can copy; profile before rewriting. Classes pay ARC retain/release, which shows up in tight loops. Arrays of structs can be cache-friendly; arrays of classes are pointers to scattered objects.
 
-- Lots of large non-COW structs passed through many layers can copy. Profile.
-- Classes pay ARC retain/release. In tight loops that can show up.
-- Arrays of structs can be cache-friendly; arrays of classes are pointers.
+Class instances live on the heap and die when ARC hits zero. Structs live wherever their owner lives — a stack frame, inside another object, inside an array buffer. Copy-on-write collections put the buffer on the heap even when the `Array` value sits in a local `let`.
 
-### Memory implications
-
-Class instances live on the heap and die when ARC hits zero. Structs live wherever their owner lives (stack frame, inside another object, inside an array buffer).
-
-### Thread-safety implications
-
-Immutable structs composed of Sendable fields are trivial to share. Classes need isolation (actor, MainActor, locks).
+Immutable structs composed of `Sendable` fields are trivial to share across isolation domains. Classes need isolation: an actor, `@MainActor`, or a lock. “I made it a class so I can mutate it from a background queue” is how races are born.
 
 ---
 
 ## `enum`
-
-```text
-Experience: 0–2
-Advanced: 2–4
-Importance: Critical
-```
 
 ```swift
 enum LoadState {
@@ -194,15 +130,11 @@ enum LoadState {
 }
 ```
 
-### Why enums exist
+An enum is a closed set of possibilities. Associated values attach data to a case. That is how you avoid invalid combinations: `isLoading == true && data != nil && error != nil` is four booleans pretending to be a state machine. `LoadState` makes “loading and also failed” unrepresentable.
 
-Closed sets of possibilities. Associated values attach data to a case. This is how you avoid invalid combinations (`isLoading == true && data != nil && error != nil`).
+If you use booleans instead, impossible states become representable, and the UI will eventually show them. That is the whole argument for enums in application code, not just “Swift has enums.”
 
-### What happens if we use booleans instead
-
-Impossible states become representable. UI bugs.
-
-### Raw values and `Codable`
+Raw values plus `Codable` are the simple wire format:
 
 ```swift
 enum Role: String, Codable {
@@ -210,7 +142,7 @@ enum Role: String, Codable {
 }
 ```
 
-### Indirect enums (trees)
+Recursive enums need `indirect`, because otherwise the compiler cannot size the type — it would contain itself forever:
 
 ```swift
 enum Tree {
@@ -219,17 +151,13 @@ enum Tree {
 }
 ```
 
-Needed because the enum would otherwise have infinite size.
-
-### When not to use enum
-
-Open sets that grow per server (`stringly` typed features) — then a struct + known cases + `unknown(String)` may be better. Still prefer enum with `@unknown default` for frozen-ish sets.
+Skip an enum when the set is open and grows per server (`stringly` typed feature flags). Then a struct plus known cases plus `unknown(String)` may be better. Still prefer an enum with `@unknown default` for frozen-ish sets you do not own. If you own the set, list the cases and let exhaustiveness work for you.
 
 ---
 
 ## Properties
 
-### Stored vs computed
+Stored properties are storage. Computed properties are methods wearing property syntax — they are not stored. If you put heavy work in a getter, every access pays.
 
 ```swift
 struct Rect {
@@ -239,9 +167,7 @@ struct Rect {
 }
 ```
 
-Computed properties are methods wearing property syntax. They are not stored. If you put heavy work in a getter, every access pays.
-
-### `lazy`
+`lazy` defers creation until first access. It must be `var`. It is **not thread-safe** for the initialisation race. Concurrent first access can run the initialiser twice or worse. Prefer `let` with eager init, or an actor, or a lock around creation.
 
 ```swift
 lazy var formatter: DateFormatter = {
@@ -251,9 +177,7 @@ lazy var formatter: DateFormatter = {
 }()
 ```
 
-Created on first access. Must be `var`. **Not thread-safe** for the initialisation race. Do not use `lazy` for concurrent first access. Prefer `let` with eager init, or an actor, or `OSAllocatedUnfairLock` around creation.
-
-### `static` vs `class`
+`static` versus `class` is about override:
 
 ```swift
 struct Math {
@@ -266,13 +190,11 @@ class Vehicle {
 }
 ```
 
-`static` on a class is not overridable. `class` keyword on properties/methods allows subclass override.
+`static` on a class is not overridable. The `class` keyword on properties and methods allows a subclass to override. Structs and enums only have `static`.
 
-### `mutating`
+`mutating` is required to mutate `self` in a struct or enum method. Changing a stored property *is* replacing `self`. Classes do not mark methods `mutating`.
 
-Required to mutate `self` in a struct/enum method.
-
-### Property observers
+Property observers look like this:
 
 ```swift
 var name: String = "" {
@@ -281,14 +203,12 @@ var name: String = "" {
 }
 ```
 
-Not called during `init` (with some exceptions around `defer` and after all properties are set — **do not rely on observers in `init`**). Prefer explicit methods if observation is business logic.
+They are not called during `init` in the way people hope (do not rely on observers in `init`). Prefer an explicit method if observation is business logic. In SwiftUI, do not use `didSet` on `@State` expecting to drive logic; use `.onChange` or Observation.
 
-**SwiftUI:** do not use `didSet` on `@State` expecting to drive logic; use `.onChange` or Observation.
-
-### Access control
+Access control, from tightest to most open:
 
 ```text
-private          → file? No: enclosing declaration (type or file for file-level)
+private          → enclosing declaration (the type, or the file for file-level decls)
 fileprivate      → this file
 internal         → this module (default)
 package          → this package (Swift 5.9+)
@@ -296,7 +216,7 @@ public           → other modules, limited subclassing
 open             → other modules, subclassable / overridable
 ```
 
-**Interview:** `@State private var` — `private` because only this view should touch storage. The wrapper still lets SwiftUI mutate it.
+`@State private var` is `private` because only this view should touch the storage. The wrapper still lets SwiftUI mutate it. That pairing — private name, framework-owned storage — is the access-control question hiding inside a SwiftUI round.
 
 ---
 
@@ -311,7 +231,7 @@ struct User {
 }
 ```
 
-### Class designated vs convenience
+Structs get a memberwise `init` if you do not write your own. Classes do not: you write designated initialisers, and optionally convenience ones.
 
 ```swift
 class Person {
@@ -321,9 +241,9 @@ class Person {
 }
 ```
 
-Rules: designated inits call super; convenience call designated on `self`. Know two-phase initialization: all stored properties set before using `self`.
+Designated inits call `super` (if there is a superclass) and initialise every stored property. Convenience inits call a designated init on `self`. Two-phase initialisation: all stored properties are set before you use `self`. That is why you cannot call an instance method or read `self` in a designated init before the last property is assigned.
 
-### Failable `init?`
+Failable `init?` returns `nil` on illegal input instead of trapping:
 
 ```swift
 init?(code: String) {
@@ -331,9 +251,7 @@ init?(code: String) {
 }
 ```
 
-### Required init
-
-Subclasses must implement. Common with `NSCoder`.
+`required init` means subclasses must implement it. You will meet it with `NSCoder` and with protocol initialiser requirements.
 
 ---
 
@@ -345,20 +263,13 @@ extension String {
 }
 ```
 
-Add methods, computed properties, protocol conformances. Cannot add stored properties (except via tricks like associated objects on classes — avoid).
+Extensions add methods, computed properties, and protocol conformances. They cannot add stored properties (associated objects on classes are a trick; avoid them). Use extensions to group API, keep the original type declaration small, and do retroactive modelling — `extension Date: Identifiable` when you need it, not when you own `Date`.
 
-Why: group API, keep types small, retroactive modelling.
-
-When not: huge extensions that hide the type’s real surface. File organisation by feature is fine.
+A huge extension that hides the type’s real surface is just a poorly split file. Organising by feature is fine; hiding stored properties in an extension three files away is not.
 
 ---
 
 ## Composition vs inheritance
-
-```text
-Experience: 2–4
-Importance: High
-```
 
 Prefer `has-a` over `is-a`.
 
@@ -369,49 +280,33 @@ struct Car {
 }
 ```
 
-Inheritance couples lifecycles and storage. Protocols + structs scale better in Swift. UIKit still uses class inheritance because it is an object framework from the 2000s.
+Inheritance couples lifecycles and storage. A subclass is stuck with the superclass’s stored properties, `init` rules, and thread-safety story. Protocols plus structs scale better in Swift: you describe the behaviour you need, provide defaults in extensions, and conform types that have no shared ancestor.
+
+UIKit still uses class inheritance because it is an object framework from the 2000s. You will subclass `UIViewController`. You should not invent a new `BaseViewModel` hierarchy for SwiftUI on that precedent.
 
 ---
 
 ## Common mistakes
 
-```text
-❌ class for every model “because Java”
-✅ struct for data; class/actor for identity and shared mutable state
+`class` for every model “because Java” fights SwiftUI and concurrency; use a struct for data, a class or actor for identity and shared mutable state. A huge struct mutated on every keystroke and copied through twelve layers should have isolated mutation — a class model or `@Observable`. `lazy var` on a type used from multiple threads is a race; use `let` plus `init`, or an actor. `didSet` as architecture should have been an explicit method, Observation, or Combine.
 
-❌ Huge struct mutated on every keystroke copied through 12 layers
-✅ Isolate mutation; consider a class model or @Observable
-
-❌ lazy var on a type used from multiple threads
-✅ Let + init, or actor
-
-❌ didSet as architecture
-✅ Explicit methods, Observation, Combine
-```
+---
 
 ## Quick Revision
 
-- struct = value, class = reference
-- enum = exclusive states
-- `mutating`, `lazy`, `static`/`class`, observers
-- Prefer composition
+Struct is a value, class is a reference. Enum is exclusive states with optional associated data. `mutating` is how a struct method changes `self`. `lazy` is deferred, not thread-safe. `static` is not overridable; `class` members can be. Prefer composition, and reach for an actor when the shared mutable state is concurrent.
+
+---
 
 ## One-minute explanation
 
-“I model data as structs so copies do not surprise me. I use classes when I need shared identity, UIKit objects, or observable models. I use enums so illegal states cannot be built. If I need shared mutable state with concurrency, I reach for an actor, not a casually thread-safe class.”
+I model data as structs so copies do not surprise me. I use classes when I need shared identity, UIKit objects, or observable models. I use enums so illegal states cannot be built. If I need shared mutable state with concurrency, I reach for an actor, not a casually thread-safe class.
 
 ---
 
 # Protocol-Oriented Programming
 
-```text
-Experience: 0–2 (syntax)
-Experience: 2–4 (POP design)
-Experience: 4+ (existentials, generics, performance)
-Category: Swift
-Difficulty: Intermediate
-Importance: Critical
-```
+The syntax is junior. Designing with protocols is mid-level. Existentials, generics, and the performance of `some` versus `any` is senior. Interviews treat this as “do you understand Swift, or did you just learn classes in another language?”
 
 ## Protocol declaration
 
@@ -421,17 +316,11 @@ protocol Fetching {
 }
 ```
 
-A protocol is a **contract**: types that conform must provide the requirements (or get them from an extension).
+A protocol is a **contract**: types that conform must provide the requirements, or inherit a default from an extension. That is polymorphism without a shared superclass. Test doubles conform. Unrelated types share behaviour — `Decodable`, `Hashable`, `Equatable` — without being cousins in a class tree.
 
-### Why protocols exist
+Requirements can be methods, properties (`{ get }` or `{ get set }`), associated types, and sometimes initialisers. A `{ get }` property can be stored or computed on the conforming type. `{ get set }` requires a writable stored property or a computed property with a setter.
 
-Polymorphism without a shared superclass. Test doubles. Multiple unrelated types (`URL`, `String`) can both be `View`? No — `View` is a protocol with associated type constraints. Bad example. Better: `Decodable`, `Hashable`, `Equatable`.
-
-### Protocol requirements
-
-Methods, properties (`{ get }` or `{ get set }`), associated types, sometimes initializers.
-
-### Protocol extensions
+Default implementations live in protocol extensions:
 
 ```swift
 extension Fetching {
@@ -441,7 +330,7 @@ extension Fetching {
 }
 ```
 
-Default implementations live here. **Witness tables:** the default is used if the type does not provide its own. Dispatch of protocol-extension methods that are **not** protocol requirements is **static** — a famous trap.
+The default is used if the type does not provide its own. Dispatch of protocol-extension methods that are **not** protocol requirements is **static**. That is a famous trap.
 
 ```swift
 protocol P { }
@@ -455,9 +344,9 @@ let p: any P = S()
 p.f()  // prints "default" because f is not a requirement
 ```
 
-If `f` is a protocol requirement, `p.f()` prints `"S"`.
+If `f` is a protocol requirement, `p.f()` prints `"S"`. The witness table only has entries for requirements. An extension method that is not on the protocol is just a static function the compiler picks from the static type, which here is `any P`.
 
-**Interview gold.** This is how they distinguish people who used protocols from people who understood them.
+This is how interviewers distinguish people who used protocols from people who understood them. If a method must be overridable through an existential, declare it on the protocol.
 
 ---
 
@@ -468,6 +357,8 @@ typealias AuthSession = Fetching & TokenRefreshing
 
 func start(_ session: any Fetching & TokenRefreshing) { }
 ```
+
+Composition is “this value must satisfy both contracts.” It is not multiple inheritance of storage. The type still has one concrete representation; it just has to provide two sets of requirements. Prefer composition of small protocols over a god protocol that describes an entire application.
 
 ---
 
@@ -480,16 +371,16 @@ protocol Repository {
 }
 ```
 
-Protocols with associated types (PAT) cannot be used as `any Repository` in older Swift without type erasure. In modern Swift, `any Repository` is allowed but **uses of `Item` are restricted** — you often cannot return `Item` from a heterogeneous existential easily.
+An associated type is a placeholder the conforming type fills in — `Item` might be `User` for one repository and `Post` for another. Protocols with associated types (PATs) could not be used as `any Repository` in older Swift without type erasure. In modern Swift, `any Repository` is allowed, but **uses of `Item` are restricted**. You often cannot treat `Item` as a single concrete type when the existential could be hiding many different `Item`s.
 
 ```swift
 func printAll(_ repo: any Repository) async throws {
     let items = try await repo.all()
-    // items is [any Repository.Item] in spirit — limited
+    // items is a collection of the associated type, limited through the existential
 }
 ```
 
-Prefer generics:
+Prefer generics when you still need the associated type as a real type:
 
 ```swift
 func printAll<R: Repository>(_ repo: R) async throws {
@@ -497,17 +388,13 @@ func printAll<R: Repository>(_ repo: R) async throws {
 }
 ```
 
+The generic version specialises: inside the function, `R.Item` is one type. The existential version is a box, and the associated type is mostly opaque from the outside.
+
 ---
 
 ## `some` vs `any`
 
-```text
-Experience: 2–4
-Advanced: 4+
-Importance: Critical
-```
-
-### `some Protocol` — opaque type
+### Opaque `some`
 
 ```swift
 func makeButton() -> some View {
@@ -515,36 +402,26 @@ func makeButton() -> some View {
 }
 ```
 
-The compiler knows the **concrete type** but callers cannot name it. All return paths must be the **same** concrete type (unless you use `if` + `@ViewBuilder` which still produces one opaque wrapper type).
+The compiler knows the **concrete type** but callers cannot name it. All return paths must be the **same** concrete type, unless you use `if` plus `@ViewBuilder`, which still produces one opaque wrapper type rather than two different return types.
 
-**Why:** abstraction without existential boxing. Fast. Identity of the type is stable. This is why `View.body` is `some View`.
+That is abstraction without existential boxing. Fast. The identity of the type is stable. This is why `View.body` is `some View`. The compiler can still specialise, still see that this view is a `Text` or a `TupleView`, still diff it properly.
 
-### `any Protocol` — existential
+### Existential `any`
 
 ```swift
 let views: [any View] = [Text("A"), Image(systemName: "star")]
 ```
 
-The box can hold different concrete types. Access through the protocol witness table. Extra indirection. In SwiftUI, `any View` **destroys specialised view identity** and often **hurts performance** and animation. Prefer `some View` and `@ViewBuilder`/`Group`/`AnyView` only when you must type-erase.
-
-`AnyView` is a SwiftUI type eraser. Use sparingly.
-
-### Example comparison
+The box can hold different concrete types. Access goes through the protocol witness table. Extra indirection. In SwiftUI, `any View` **destroys specialised view identity** and often **hurts performance and animation**. Prefer `some View` and `@ViewBuilder` / `Group`. Reach for `AnyView` (the SwiftUI type eraser) only when you must type-erase, and do it as low in the tree as you can.
 
 ```swift
 func opaque() -> some Hashable { 1 }          // hidden Int
 func box() -> any Hashable { 1 }              // existential
 ```
 
-You cannot put `some Hashable` in an array of mixed types. You can put `any Hashable` in an array.
+You cannot put mixed `some Hashable` values in an array — each `some` is one concrete type, hidden. You can put `any Hashable` in an array, because the box is one type.
 
-### What happens if we write `any View` everywhere
-
-Heavier runtime, worse diffing, mysterious identity bugs. Write `some View`.
-
-### When `any` is correct
-
-Heterogeneous collections, plugin systems, stored properties of mixed conformers (`var destination: any Hashable` in a router — still think hard).
+Writing `any View` everywhere is heavier at runtime, worse at diffing, and a source of mysterious identity bugs. Write `some View`. Use `any` for heterogeneous collections, plugin systems, and stored properties of mixed conformers (`var destination: any Hashable` in a router — still think hard; a generic `Hashable` route type is often better).
 
 ---
 
@@ -555,49 +432,33 @@ func log<T: CustomStringConvertible>(_ value: T) { print(value.description) }
 func logBox(_ value: any CustomStringConvertible) { print(value.description) }
 ```
 
-The generic version specialises per type (faster, more optimiser-friendly). The existential is one function, dynamic dispatch.
-
-**When generics make code worse:** unreadable `where` clauses five levels deep for a one-off. Then use `any` or a concrete type.
+The generic version specialises per type — faster, more optimiser-friendly, associated types remain usable. The existential is one function with dynamic dispatch. Use `any` when you truly need mixed types at runtime, or when the generic `where` clauses become a novel for a one-off. Senior engineers simplify: if there is only one type ever, do not genericise, and do not existentialise either — take the concrete type.
 
 ---
 
 ## POP vs OOP
 
-Protocol-oriented programming: start with the behaviour you need, provide defaults in extensions, conform structs.
+Protocol-oriented programming starts with the behaviour you need, provides defaults in extensions, and conforms structs. Object-oriented programming starts with a class hierarchy.
 
-OOP: start with a class hierarchy.
-
-Swift is mixed. UIKit is OOP. Swift standard library is POP.
+Swift is mixed. UIKit is OOP. The Swift standard library is POP. You will write both. The mistake is building a `BaseViewController`-shaped hierarchy for data types that should have been structs conforming to small protocols.
 
 ---
 
 ## Common mistakes
 
-```text
-❌ Protocol extension methods that are not requirements, expecting dynamic dispatch
-✅ Declare them on the protocol if they must be overridable
+Protocol-extension methods that are not requirements do not dispatch dynamically; declare them on the protocol if they must be overridable through `any P`. `any View` in a SwiftUI `body` should have been `some View`. A giant protocol that describes an entire feature should have been split — interface segregation, several small contracts, composition with `&`.
 
-❌ any View in SwiftUI body
-✅ some View
-
-❌ Giant protocols (God protocols)
-✅ Split: Interface Segregation
-```
+---
 
 ## One-minute explanation
 
-“A protocol is a contract. I prefer generics and `some` for static, fast polymorphism. I use `any` when I truly need mixed types at runtime. I never assume protocol-extension methods dispatch dynamically unless they are protocol requirements.”
+A protocol is a contract. I prefer generics and `some` for static, fast polymorphism. I use `any` when I truly need mixed types at runtime. I never assume protocol-extension methods dispatch dynamically unless they are protocol requirements.
 
 ---
 
 # Generics
 
-```text
-Experience: 2–4
-Category: Swift
-Difficulty: Intermediate
-Importance: High
-```
+Generics are how you write an algorithm once and keep type safety. `Array<Element>` is the proof. Interviews at 2–4 years expect constraints, `where` clauses, and a sane story about `any` versus `<T:>`.
 
 ## Generic functions and types
 
@@ -611,11 +472,7 @@ struct Box<Value> {
 }
 ```
 
-### Why they exist
-
-Write algorithms once, keep type safety. `Array<Element>` is the proof.
-
-### Constraints
+`T` and `Value` are placeholders. At each call site or each `Box<Int>`, they become a real type. Constraints narrow what that type can be:
 
 ```swift
 func maxVal<T: Comparable>(_ a: T, _ b: T) -> T {
@@ -627,7 +484,9 @@ func decode<T: Decodable>(_ data: Data) throws -> T {
 }
 ```
 
-### `where` clauses
+Without `Comparable`, `>` would not compile. Without `Decodable`, `JSONDecoder.decode` would not compile. The constraint is the contract, same idea as a protocol, but resolved statically per specialisation.
+
+`where` clauses attach extra constraints, including on associated types or on `Element` of a collection:
 
 ```swift
 func flatten<T>(_ boxes: [Box<T>]) -> [T] {
@@ -639,9 +498,7 @@ extension Array where Element: Equatable {
 }
 ```
 
-### Type erasure (classic)
-
-Before `any`, we wrote `AnyPublisher`, `AnyView`, `AnyIterator`. A type eraser is a wrapper that hides a generic concrete type behind a single named type, usually by storing closures or a private class hierarchy.
+Type erasure is the classic pre-`any` move. We wrote `AnyPublisher`, `AnyView`, `AnyIterator`: a wrapper that hides a generic concrete type behind a single named type, usually by storing closures or a private class hierarchy.
 
 ```swift
 struct AnyFetcher: Fetching {
@@ -651,23 +508,15 @@ struct AnyFetcher: Fetching {
 }
 ```
 
-Modern Swift: `any Fetching` may suffice. Type erasure still useful to hide associated types or to be `Hashable`/`Codable` in ways existentials are not.
+Modern Swift: `any Fetching` may suffice. Type erasure is still useful to hide associated types, or to be `Hashable` / `Codable` in ways existentials are not. `AnyView` is still the SwiftUI hammer; use it sparingly because it erases identity.
 
-### When generics overcomplicate
-
-If there is only one type ever, do not genericise. If the compiler errors become novels, you overdid constraints. Senior engineers simplify.
+If there is only one type ever, do not genericise. If the compiler errors become novels, you overdid constraints. The senior move is to simplify.
 
 ---
 
 # Error Handling
 
-```text
-Experience: 0–2
-Advanced: 2–4
-Category: Swift
-Difficulty: Beginner
-Importance: High
-```
+Errors are values that conform to `Error`. Throwing is control flow the compiler tracks. Empty `catch` on a network call is an interview fail.
 
 ```swift
 enum NetworkError: Error {
@@ -688,7 +537,7 @@ do {
 }
 ```
 
-### `try`, `try?`, `try!`
+`try` must sit in a `do` or in a throwing function. `try?` converts errors to `nil` and **swallows the error value** — dangerous if you needed it for logging. `try!` crashes on throw, the error equivalent of force unwrap, and the same rule applies: only when a crash is the honest failure.
 
 | | Behaviour |
 | --- | --- |
@@ -696,26 +545,18 @@ do {
 | `try?` | Converts errors to `nil`, swallows the error value |
 | `try!` | Crash on throw |
 
-`try?` is dangerous if you needed the error for logging.
-
-### `throws` vs `Result`
+`async throws` is the modern happy path for work that can fail. `Result` is useful when you need to *store* an outcome, pass it through a non-throwing API, or talk to Combine.
 
 ```swift
 func load() async -> Result<Data, Error>
 ```
 
-`async throws` is the modern happy path. `Result` is useful when storing an outcome, or Combine.
+Never fail silently in networking. Map HTTP status to errors. Catch specific cases you can recover from, and let the rest surface. `catch { }` with an empty body is how bugs ship.
 
-### Never fail silently in networking
-
-Map HTTP status to errors. Empty `catch` is an interview fail.
-
-### Typed throws (Swift 6)
+Typed throws exist in Swift 6:
 
 ```swift
 func load() throws(NetworkError) -> Data
 ```
 
-Know that it exists for 4+ interviews; many codebases still use untyped `Error`.
-
----
+The function may only throw `NetworkError`, and callers can switch exhaustively without a catch-all. Many codebases still use untyped `Error`. Know typed throws for 4+ interviews; do not pretend every production API is typed already. For a new module you control, typed throws are a reasonable default when the error set is closed.
